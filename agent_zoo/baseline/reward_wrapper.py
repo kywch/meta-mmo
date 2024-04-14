@@ -58,7 +58,7 @@ class RewardWrapper(TeamWrapper):
     def reward_terminated_truncated_info(self, agent_id, reward, terminated, truncated, info):
         # Handle game over
         if self.env.game.is_over:
-            if self.env.game.winners and self.agent_id in self.env.game.winners:
+            if self.env.game.winners and agent_id in self.env.game.winners:
                 reward = self.game_won_reward or self.env.game.winning_score
                 truncated = True
             else:

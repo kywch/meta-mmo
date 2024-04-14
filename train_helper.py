@@ -196,17 +196,12 @@ def generate_replay(args, env_creator, agent_creator, stop_when_all_complete_tas
 
         num_alive = len(nmmo_env.agents)
         task_done = sum(1 for task in nmmo_env.tasks if task.completed)
-        alive_done = sum(
-            1
-            for task in nmmo_env.tasks
-            if task.completed and task.assignee[0] in nmmo_env.realm.players
-        )
         print("Tick:", nmmo_env.realm.tick, ", alive agents:", num_alive, ", task done:", task_done)
-        if num_alive == alive_done:
-            print("All alive agents completed the task.")
-            break
-        if num_alive == 0 or nmmo_env.realm.tick == args.env.max_episode_length:
-            print("All agents died or reached the max episode length.")
+        if nmmo_env.game.is_over:
+            if nmmo_env.game.winners is not None:
+                print("Winners:", nmmo_env.game.winners)
+            else:
+                print("No winners.")
             break
 
     # Count how many agents completed the task

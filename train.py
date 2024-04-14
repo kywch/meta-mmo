@@ -13,7 +13,7 @@ import pufferlib.utils
 from reinforcement_learning import environment
 from train_helper import init_wandb, train, sweep, generate_replay
 
-DEBUG = True
+DEBUG = False
 # See curriculum_generation/manual_curriculum.py for details
 BASELINE_CURRICULUM = "curriculum_generation/team_curriculum_with_embedding.pkl"
 

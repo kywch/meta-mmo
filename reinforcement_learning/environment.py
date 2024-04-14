@@ -2,16 +2,27 @@ from argparse import Namespace
 
 import pufferlib
 import pufferlib.emulation
-
 from pettingzoo.utils.wrappers.base_parallel import BaseParallelWrapper
 
 import nmmo
 import nmmo.core.config as nc
 import nmmo.core.game_api as ng
-
+from nmmo.task import task_spec
 
 def alt_combat_damage_formula(offense, defense, multiplier, minimum_proportion):
     return int(max(multiplier * offense - defense, offense * minimum_proportion))
+
+
+class TeamBattle(ng.TeamBattle):
+    def _set_config(self):
+        self.config.reset()
+        self.config.set_for_episode("DEATH_FOG_SPEED", 1/6)
+        self.config.set_for_episode("DEATH_FOG_FINAL_SIZE", 8)
+
+    def _define_tasks(self):
+        sampled_spec = self._get_cand_team_tasks(num_tasks=1, tags="team_battle")[0]
+        return task_spec.make_task_from_spec(self.config.TEAMS,
+                                             [sampled_spec] * len(self.config.TEAMS))
 
 
 class MiniGameConfig(
@@ -46,7 +57,7 @@ class MiniGameConfig(
         self.set("RESOURCE_RESILIENT_POPULATION", env_args.resilient_population)
         self.set("COMBAT_SPAWN_IMMUNITY", env_args.spawn_immunity)
 
-        self.set("GAME_PACKS", [(ng.TeamBattle, 1)])
+        self.set("GAME_PACKS", [(TeamBattle, 1)])
         self.set("CURRICULUM_FILE_PATH", env_args.curriculum_file_path)
 
         # Game-balancing related, making the game somewhat easier

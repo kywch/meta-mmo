@@ -18,9 +18,9 @@ train:
   seed: 1
   torch_deterministic: True
   device: cuda
-  total_timesteps: 10_000_000
+  total_timesteps: 200_000_000
   learning_rate: 1.0e-4
-  anneal_lr: False
+  anneal_lr: True
   gamma: 0.99
   gae_lambda: 0.95
   update_epochs: 3
@@ -38,7 +38,7 @@ train:
   env_pool: True
   verbose: True
   data_dir: runs
-  checkpoint_interval: 200
+  checkpoint_interval: 763  # every 25M steps
   pool_kernel: [0]
   batch_size: 32768
   batch_rows: 128
@@ -98,7 +98,7 @@ recurrent:
 
 reward_wrapper:
   eval_mode: False
-  early_stop_agent_num: 8
+  early_stop_agent_num: 0
 
 baseline:
   reward_wrapper:
