@@ -1,0 +1,112 @@
+wandb:
+  project: nmmo-team
+  entity: kywch
+  group: ~
+
+debug:
+  train:
+    num_envs: 1
+    envs_per_batch: 1  # batching envs work?
+    envs_per_worker: 1
+    batch_size: 1024
+    total_timesteps: 10000
+    pool_kernel: [0, 1]
+    checkpoint_interval: 3
+    verbose: True
+
+train:
+  seed: 1
+  torch_deterministic: True
+  device: cuda
+  total_timesteps: 10_000_000
+  learning_rate: 1.0e-4
+  anneal_lr: False
+  gamma: 0.99
+  gae_lambda: 0.95
+  update_epochs: 3
+  norm_adv: True
+  clip_coef: 0.1
+  clip_vloss: True
+  ent_coef: 0.01
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  target_kl: ~
+
+  num_envs: 15
+  envs_per_worker: 1
+  envs_per_batch: 6
+  env_pool: True
+  verbose: True
+  data_dir: runs
+  checkpoint_interval: 200
+  pool_kernel: [0]
+  batch_size: 32768
+  batch_rows: 128
+  bptt_horizon: 8
+  vf_clip_coef: 0.1
+  compile: False
+  compile_mode: reduce-overhead
+
+sweep:
+  method: random
+  name: sweep
+  metric:
+    goal: maximize
+    name: episodic_return
+  # Nested parameters name required by WandB API
+  parameters:
+    train:
+      parameters:
+        learning_rate: {
+          'distribution': 'log_uniform_values',
+          'min': 1e-4,
+          'max': 1e-1,
+        }
+        batch_size: {
+          'values': [128, 256, 512, 1024, 2048],
+        }
+        batch_rows: {
+          'values': [16, 32, 64, 128, 256],
+        }
+        bptt_horizon: {
+          'values': [4, 8, 16, 32],
+        }
+
+env:
+  num_agents: 128
+  num_agents_per_team: 8
+  num_npcs: 256
+  max_episode_length: 1024
+  maps_path: 'maps/train/'
+  map_size: 128
+  num_maps: 256
+  map_force_generation: False
+  death_fog_tick: 256
+  task_size: 2048
+  spawn_immunity: 20
+  resilient_population: 0
+
+policy:
+  input_size: 256
+  hidden_size: 256
+  task_size: 2059  # task_size + team/agents + system states
+
+recurrent:
+  input_size: 256
+  hidden_size: 256
+  num_layers: 1
+
+reward_wrapper:
+  eval_mode: False
+  early_stop_agent_num: 8
+
+baseline:
+  reward_wrapper:
+    game_lost_penalty: -1.0
+    game_won_reward: ~
+    nontask_bonus_scale: 0.1
+    hp_bonus_weight: 0.03
+    exp_bonus_weight: 0.002
+    defense_bonus_weight: 0.04
+    attack_bonus_weight: 0.0
+    gold_bonus_weight: 0.001

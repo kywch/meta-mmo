@@ -1,0 +1,1 @@
+This model is based on [the yaofeng model](https://github.com/CarperAI/nmmo-baselines/tree/puf07-nmmomg/agent_zoo/yaofeng) from the nmmo2 baselines.

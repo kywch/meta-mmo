@@ -1,0 +1,24 @@
+name: tox
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        py: ["3.8", "3.9", "3.10"]
+    steps:
+      - name: Setup python for test ${{ matrix.py }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.py }}
+      - uses: actions/checkout@v3
+      - name: Upgrade pip
+        run: python -m pip install -U pip setuptools wheel cython
+      - name: Install
+        run: python -m pip install -e '.[dev]'
+      - name: Check formatting
+        run: ruff format .
+      - name: Check lint
+        run: ruff check .
