@@ -45,9 +45,11 @@ class TeamWrapper(BaseStatWrapper):
         return obs, info
 
     def _reset_team_vars(self, obs):
-        self._task.clear()
+        self._task = {
+            agent_id: self.env.agent_task_map[agent_id][0]
+            for agent_id in self.env.possible_agents
+        }
         for agent_id in self.env.possible_agents:
-            self._task[agent_id] = self.env.agent_task_map[agent_id][0]
             self._task_obs[agent_id][0] = float(self._task[agent_id].reward_to == "team")
             self._task_obs[agent_id][1:1+len(self.config.system_states)] = self.config.system_states
             self._task_obs[agent_id][1+len(self.config.system_states):] = self._task[agent_id].embedding
