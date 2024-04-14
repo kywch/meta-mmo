@@ -73,7 +73,7 @@ class TeamWrapper(BaseStatWrapper):
         entity_mask = whole_mask[:-1]
         if entity_mask.sum() == 0 and whole_mask[-1] == 1:  # no valid target
             return whole_mask
-        if len(self._task[agent_id].assignee) == 1:  # no team
+        if agent_id not in self._task or len(self._task[agent_id].assignee) == 1:  # no team
             return whole_mask
         # the order of entities in obs["Entity"] is the same as in the mask
         teammate = np.in1d(agent_obs["Entity"][:, EntityAttr["id"]], self._task[agent_id].assignee)
