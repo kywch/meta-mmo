@@ -1,5 +1,3 @@
-import functools
-
 import numpy as np
 import gymnasium as gym
 
@@ -18,8 +16,9 @@ class TeamWrapper(BaseStatWrapper):
         # Team/agent, system states, task embedding
         self._task = {}
         self._task_obs = {  # Task dim: 2059
-            agent_id: np.zeros(1+len(self.config.system_states)+self.config.TASK_EMBED_DIM,
-                              dtype=np.float16)
+            agent_id: np.zeros(
+                1 + len(self.config.system_states) + self.config.TASK_EMBED_DIM, dtype=np.float16
+            )
             for agent_id in self.env.possible_agents
         }
 
@@ -27,15 +26,16 @@ class TeamWrapper(BaseStatWrapper):
         self._dist_map = np.zeros((self.config.MAP_SIZE, self.config.MAP_SIZE), dtype=np.int16)
         center = self.config.MAP_SIZE // 2
         for i in range(center):
-            l, r = i, self.config.MAP_SIZE - i
-            self._dist_map[l:r, l:r] = center - i - 1
+            lb, rb = i, self.config.MAP_SIZE - i
+            self._dist_map[lb:rb, lb:rb] = center - i - 1
 
     def observation_space(self, agent_id):
         """If you modify the shape of features, you need to specify the new obs space"""
         obs_space = super().observation_space(agent_id)
         # Add system states to the task obs
-        obs_space["Task"] = gym.spaces.Box(low=-2**15, high=2**15-1, dtype=np.float16,
-                                           shape=self._task_obs[1].shape)
+        obs_space["Task"] = gym.spaces.Box(
+            low=-(2**15), high=2**15 - 1, dtype=np.float16, shape=self._task_obs[1].shape
+        )
         return obs_space
 
     def reset(self, **kwargs):
@@ -46,13 +46,16 @@ class TeamWrapper(BaseStatWrapper):
 
     def _reset_team_vars(self, obs):
         self._task = {
-            agent_id: self.env.agent_task_map[agent_id][0]
-            for agent_id in self.env.possible_agents
+            agent_id: self.env.agent_task_map[agent_id][0] for agent_id in self.env.possible_agents
         }
         for agent_id in self.env.possible_agents:
             self._task_obs[agent_id][0] = float(self._task[agent_id].reward_to == "team")
-            self._task_obs[agent_id][1:1+len(self.config.system_states)] = self.config.system_states
-            self._task_obs[agent_id][1+len(self.config.system_states):] = self._task[agent_id].embedding
+            self._task_obs[agent_id][1 : 1 + len(self.config.system_states)] = (
+                self.config.system_states
+            )
+            self._task_obs[agent_id][1 + len(self.config.system_states) :] = self._task[
+                agent_id
+            ].embedding
 
             obs[agent_id] = self.observation(agent_id, obs[agent_id])
         return obs
@@ -64,7 +67,9 @@ class TeamWrapper(BaseStatWrapper):
         agent_obs["Task"] = self._task_obs[agent_id]
 
         # Do NOT attack teammates
-        agent_obs["ActionTargets"]["Attack"]["Target"] = self._process_attack_mask(agent_id, agent_obs)
+        agent_obs["ActionTargets"]["Attack"]["Target"] = self._process_attack_mask(
+            agent_id, agent_obs
+        )
 
         return agent_obs
 

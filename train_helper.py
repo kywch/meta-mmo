@@ -111,8 +111,10 @@ def generate_replay(args, env_creator, agent_creator, stop_when_all_complete_tas
     args.reward_wrapper.early_stop_agent_num = 0
 
     # Use the policy pool helper functions to create kernel (policy-agent mapping)
+    # TODO: Revisit shuffle for evaluation
     args.train.pool_kernel = pp.create_kernel(
-        args.env.num_agents, len(policies), shuffle_with_seed=args.train.seed
+        args.env.num_agents,
+        len(policies),  # , shuffle_with_seed=args.train.seed
     )
 
     data = clean_pufferl.create(
@@ -139,10 +141,10 @@ def generate_replay(args, env_creator, agent_creator, stop_when_all_complete_tas
     # Add the policy names to agent names
     if len(policies) > 1:
         for policy_id, samp in data.policy_pool.sample_idxs.items():
-            policy_name = data.policy_pool.current_policies[policy_id]["name"]
+            policy_name = data.policy_pool.current_policies[policy_id]["name"].replace("_", "-")
             for idx in samp:
                 agent_id = idx + 1  # agents are 0-indexed in policy_pool, but 1-indexed in nmmo
-                nmmo_env.realm.players[agent_id].name = f"{policy_name}_{agent_id}"
+                nmmo_env.realm.players[agent_id].name += f"-({policy_name})"
 
     # Assign the specified task to the agents, if provided
     if args.task_to_assign is not None:

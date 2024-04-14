@@ -9,6 +9,7 @@ import nmmo.core.config as nc
 import nmmo.core.game_api as ng
 from nmmo.task import task_spec
 
+
 def alt_combat_damage_formula(offense, defense, multiplier, minimum_proportion):
     return int(max(multiplier * offense - defense, offense * minimum_proportion))
 
@@ -16,13 +17,14 @@ def alt_combat_damage_formula(offense, defense, multiplier, minimum_proportion):
 class TeamBattle(ng.TeamBattle):
     def _set_config(self):
         self.config.reset()
-        self.config.set_for_episode("DEATH_FOG_SPEED", 1/6)
+        self.config.set_for_episode("DEATH_FOG_SPEED", 1 / 6)
         self.config.set_for_episode("DEATH_FOG_FINAL_SIZE", 8)
 
     def _define_tasks(self):
         sampled_spec = self._get_cand_team_tasks(num_tasks=1, tags="team_battle")[0]
-        return task_spec.make_task_from_spec(self.config.TEAMS,
-                                             [sampled_spec] * len(self.config.TEAMS))
+        return task_spec.make_task_from_spec(
+            self.config.TEAMS, [sampled_spec] * len(self.config.TEAMS)
+        )
 
 
 class MiniGameConfig(
@@ -44,10 +46,18 @@ class MiniGameConfig(
         self.set("PLAYER_N", env_args.num_agents)
         self.set("HORIZON", env_args.max_episode_length)
         self.set("MAP_N", env_args.num_maps)
-        self.set("TEAMS", {i: [i*env_args.num_agents_per_team+j+1 for j in range(env_args.num_agents_per_team)]
-                           for i in range(env_args.num_agents // env_args.num_agents_per_team)})
         self.set(
-            "PLAYER_DEATH_FOG",
+            "TEAMS",
+            {
+                i: [
+                    i * env_args.num_agents_per_team + j + 1
+                    for j in range(env_args.num_agents_per_team)
+                ]
+                for i in range(env_args.num_agents // env_args.num_agents_per_team)
+            },
+        )
+        self.set(
+            "DEATH_FOG_ONSET",
             env_args.death_fog_tick if isinstance(env_args.death_fog_tick, int) else None,
         )
         self.set("PATH_MAPS", f"{env_args.maps_path}/{env_args.map_size}/")
@@ -98,13 +108,15 @@ class FullGameConfig(
     pass
 
 
-def make_env_creator(reward_wrapper_cls: BaseParallelWrapper,
-                     config_scope: str = None,
-                     game_cls: ng.Game = None):
+def make_env_creator(
+    reward_wrapper_cls: BaseParallelWrapper, config_scope: str = None, game_cls: ng.Game = None
+):
     def env_creator(*args, **kwargs):
         """Create an environment."""
         # args.env is provided as kwargs
-        config = MiniGameConfig(kwargs["env"]) if config_scope == "mini" else FullGameConfig(kwargs["env"])
+        config = FullGameConfig(kwargs["env"])
+        if config_scope == "mini":
+            config = MiniGameConfig(kwargs["env"])
 
         # Default game is TeamBattle
         if game_cls and isinstance(game_cls, ng.Game):
