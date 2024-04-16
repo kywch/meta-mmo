@@ -10,10 +10,6 @@ import nmmo.core.game_api as ng
 from nmmo.task import task_spec
 
 
-def alt_combat_damage_formula(offense, defense, multiplier, minimum_proportion):
-    return int(max(multiplier * offense - defense, offense * minimum_proportion))
-
-
 class TeamBattle(ng.TeamBattle):
     def _set_config(self):
         self.config.reset()
@@ -69,32 +65,6 @@ class MiniGameConfig(
 
         self.set("GAME_PACKS", [(TeamBattle, 1)])
         self.set("CURRICULUM_FILE_PATH", env_args.curriculum_file_path)
-
-        # Game-balancing related, making the game somewhat easier
-        # since all agents are on their own (no team play)
-        # self.set("NPC_LEVEL_DEFENSE", 8)  # from 15
-        # self.set("NPC_BASE_DAMAGE", 0)  # from 15
-        # self.set("NPC_LEVEL_DAMAGE", 8)  # from 15
-
-        self.set("TERRAIN_SCATTER_EXTRA_RESOURCES", True)  # extra food/water
-
-        # TODO: check if these values are good and then make them default
-        self.set("COMBAT_DAMAGE_FORMULA", alt_combat_damage_formula)
-
-        self.set("PROGRESSION_COMBAT_XP_SCALE", 6)  # from 3
-        self.set("PROGRESSION_MELEE_BASE_DAMAGE", 10)  # from 20
-        self.set("PROGRESSION_RANGE_BASE_DAMAGE", 10)
-        self.set("PROGRESSION_MAGE_BASE_DAMAGE", 10)
-
-        self.set("EQUIPMENT_WEAPON_BASE_DAMAGE", 5)  # from 15
-        self.set("EQUIPMENT_WEAPON_LEVEL_DAMAGE", 5)  # from 15
-
-        self.set("EQUIPMENT_AMMUNITION_BASE_DAMAGE", 0)  # from 15
-        self.set("EQUIPMENT_AMMUNITION_LEVEL_DAMAGE", 10)  # from 15
-
-        self.set("EQUIPMENT_TOOL_BASE_DEFENSE", 15)  # from 30
-
-        self.set("EQUIPMENT_ARMOR_LEVEL_DEFENSE", 3)  # from 10
 
 
 class FullGameConfig(
