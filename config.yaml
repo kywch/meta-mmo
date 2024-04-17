@@ -18,7 +18,7 @@ train:
   seed: 1
   torch_deterministic: True
   device: cuda
-  total_timesteps: 200_000_000
+  total_timesteps: 10_000_000
   learning_rate: 1.0e-4
   anneal_lr: True
   gamma: 0.99
@@ -87,13 +87,11 @@ env:
   resilient_population: 0
 
 policy:
-  input_size: 256
-  hidden_size: 256
+  layer_width: 1024
   task_size: 2059  # task_size + team/agents + system states
 
 recurrent:
-  input_size: 256
-  hidden_size: 256
+  layer_width: 1024
   num_layers: 1
 
 reward_wrapper:
