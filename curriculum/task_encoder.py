@@ -179,7 +179,7 @@ class TaskEncoder:
 
 
 if __name__ == "__main__":
-    import curriculum_generation.manual_curriculum as curriculum
+    import curriculum.manual_curriculum as curriculum
 
     LLM_CHECKPOINT = "deepseek-ai/deepseek-coder-1.3b-instruct"
     CURRICULUM_FILE_PATH = "curriculum_generation/curriculum_with_embedding.pkl"

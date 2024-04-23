@@ -59,4 +59,3 @@ if __name__ == "__main__":
     with TaskEncoder(LLM_CHECKPOINT, team_curriculum) as task_encoder:
         task_encoder.get_task_embedding(CURRICULUM, save_to_file=CURRICULUM_FILE_PATH)
     print("Done.")
-

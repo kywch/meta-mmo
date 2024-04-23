@@ -13,9 +13,7 @@ import pufferlib.utils
 from reinforcement_learning import environment
 from train_helper import init_wandb, train, sweep, generate_replay
 
-DEBUG = False
-# See curriculum_generation/manual_curriculum.py for details
-BASELINE_CURRICULUM = "curriculum_generation/team_curriculum_with_embedding.pkl"
+BASELINE_CURRICULUM = "curriculum/team_curriculum_with_embedding.pkl"
 
 
 def load_from_config(agent, debug=False):
@@ -167,9 +165,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m", "--mode", type=str, default="train", choices="train sweep replay".split()
     )
-    parser.add_argument(
-        "-a", "--agent", type=str, default="baseline", help="Agent module to use"
-    )
+    parser.add_argument("-a", "--agent", type=str, default="baseline", help="Agent module to use")
     parser.add_argument(
         "-n", "--exp-name", type=str, default=None, help="Need exp name to resume the experiment"
     )
@@ -194,12 +190,8 @@ if __name__ == "__main__":
         choices="serial multiprocessing ray".split(),
     )
     parser.add_argument("--no-recurrence", action="store_true", help="Do not use recurrence")
-    if DEBUG:
-        parser.add_argument("--no-track", default=True, help="Do NOT track on WandB")
-        parser.add_argument("--debug", default=True, help="Debug mode")
-    else:
-        parser.add_argument("--no-track", action="store_true", help="Do NOT track on WandB")
-        parser.add_argument("--debug", action="store_true", help="Debug mode")
+    parser.add_argument("--no-track", action="store_true", help="Do NOT track on WandB")
+    parser.add_argument("--debug", action="store_true", help="Debug mode")
 
     args = parser.parse_known_args()[0].__dict__
     config = load_from_config(args["agent"], debug=args.get("debug", False))

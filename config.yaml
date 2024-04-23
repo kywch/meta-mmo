@@ -82,16 +82,14 @@ env:
   num_maps: 256
   map_force_generation: False
   death_fog_tick: 256
-  task_size: 2048
   spawn_immunity: 20
   resilient_population: 0
 
 policy:
-  layer_width: 1024
-  task_size: 2059  # task_size + team/agents + system states
+  layer_width: 256
 
 recurrent:
-  layer_width: 1024
+  layer_width: 256
   num_layers: 1
 
 reward_wrapper:

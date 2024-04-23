@@ -4,6 +4,7 @@ from pettingzoo.utils.wrappers.base_parallel import BaseParallelWrapper
 
 from nmmo.lib.event_code import EventCode
 import nmmo.systems.item as Item
+from nmmo.minigames import RacetoCenter, KingoftheHill, Sandwich, RadioRaid
 
 
 class BaseStatWrapper(BaseParallelWrapper):
@@ -81,6 +82,36 @@ class BaseStatWrapper(BaseParallelWrapper):
         if self.env_done:
             # To mark the end of the episode. Only one agent's done flag is enough.
             infos[agent_id]["episode_done"] = True
+
+            game_name = self.env.game.__class__.__name__
+            for key, val in self.env.game.get_episode_stats().items():
+                info["stats"][game_name + "/" + key] = val
+            info["stats"][game_name + "/finished_tick"] = self.env.realm.tick
+            if self.env.game.winners:
+                info["stats"][game_name + "/winning_score"] = self.env.game.winning_score
+
+            if (
+                isinstance(self.env.game, RacetoCenter)
+                or isinstance(self.env.game, KingoftheHill)
+                or isinstance(self.env.game, Sandwich)
+                or isinstance(self.env.game, RadioRaid)
+            ):
+                info["stats"][game_name + "/game_won"] = self.env.game.winners is not None
+                info["stats"][game_name + "/map_size"] = self.env.game.map_size
+                max_progress = [task.progress_info["max_progress"] for task in self.env.game.tasks]
+                info["stats"][game_name + "/max_progress"] = max(max_progress)
+                info["stats"][game_name + "/avg_max_prog"] = sum(max_progress) / len(max_progress)
+
+            if isinstance(self.env.game, KingoftheHill):
+                info["stats"][game_name + "/seize_duration"] = self.env.game.seize_duration
+
+            if isinstance(self.env.game, Sandwich):
+                info["stats"][game_name + "/inner_npc_num"] = self.env.game.inner_npc_num
+                info["stats"][game_name + "/spawned_npc"] = abs(self.env.realm.npcs.next_id + 1)
+
+            if isinstance(self.env.game, RadioRaid):
+                info["stats"][game_name + "/goal_num_npc"] = self.env.game.goal_num_npc
+                info["stats"][game_name + "/spawned_npc"] = abs(self.env.realm.npcs.next_id + 1)
 
         return obs, rewards, terms, truncs, infos
 

@@ -22,17 +22,20 @@ def orthogonal_init(layer, gain=1.0):
 
 
 class Policy(pufferlib.models.Policy):
-    def __init__(self, env, layer_width=512, task_size=2048):
+    def __init__(self, env, layer_width=256):
         super().__init__(env)
 
         self.unflatten_context = env.unflatten_context
+
+        # NOTE: Models with different task size will not be compatible with each other
+        task_size = self.unflatten_context.flat_observation_space["DTask.V"].shape[0]
 
         self.tile_encoder = TileEncoder(layer_width)
         self.player_encoder = PlayerEncoder(layer_width)
         self.item_encoder = ItemEncoder(layer_width)
         self.inventory_encoder = InventoryEncoder(layer_width)
         self.market_encoder = MarketEncoder(layer_width)
-        self.task_encoder = TaskEncoder(layer_width, task_size)
+        self.task_encoder = TaskEncoder(task_size, layer_width)
         self.proj_fc = torch.nn.Linear(5 * layer_width, layer_width)
         self.action_decoder = ActionDecoder(layer_width)
         self.value_head = torch.nn.Linear(layer_width, 1)
@@ -90,15 +93,15 @@ class ResnetBlock(torch.nn.Module):
 
 
 class TileEncoder(torch.nn.Module):
-    def __init__(self, layer_width):
+    def __init__(self, output_size):
         super().__init__()
         self.type_embedding = torch.nn.Embedding(16, 62)
 
         self.tile_resnet = ResnetBlock(64)
         self.tile_conv_1 = torch.nn.Conv2d(64, 32, 3)
         self.tile_conv_2 = torch.nn.Conv2d(32, 8, 3)
-        self.tile_fc = torch.nn.Linear(8 * 11 * 11, layer_width)
-        self.tile_norm = torch.nn.LayerNorm(layer_width)
+        self.tile_fc = torch.nn.Linear(8 * 11 * 11, output_size)
+        self.tile_norm = torch.nn.LayerNorm(output_size)
         orthogonal_init(self.tile_fc)
 
     def forward(self, tile):
@@ -137,7 +140,7 @@ class MLPBlock(torch.nn.Module):
 
 
 class PlayerEncoder(torch.nn.Module):
-    def __init__(self, layer_width):
+    def __init__(self, output_size):
         super().__init__()
         self.entity_dim = 31
         self.player_offset = torch.tensor([i * 256 for i in range(self.entity_dim)])
@@ -153,11 +156,11 @@ class PlayerEncoder(torch.nn.Module):
         self.no_embedding_idx.remove(self.EntityAttackerId)
         self.no_embedding_idx.remove(self.EntityMessage)
 
-        self.agent_mlp = MLPBlock(64 + self.entity_dim - 3, layer_width, layer_width)
-        self.agent_fc = torch.nn.Linear(layer_width, layer_width)
-        self.my_agent_fc = torch.nn.Linear(layer_width, layer_width)
-        self.agent_norm = torch.nn.LayerNorm(layer_width)
-        self.my_agent_norm = torch.nn.LayerNorm(layer_width)
+        self.agent_mlp = MLPBlock(64 + self.entity_dim - 3, output_size, output_size)
+        self.agent_fc = torch.nn.Linear(output_size, output_size)
+        self.my_agent_fc = torch.nn.Linear(output_size, output_size)
+        self.agent_norm = torch.nn.LayerNorm(output_size)
+        self.my_agent_norm = torch.nn.LayerNorm(output_size)
         orthogonal_init(self.agent_fc)
         orthogonal_init(self.my_agent_fc)
 
@@ -186,11 +189,11 @@ class PlayerEncoder(torch.nn.Module):
 
 
 class ItemEncoder(torch.nn.Module):
-    def __init__(self, layer_width):
+    def __init__(self, output_size):
         super().__init__()
         self.embedding = torch.nn.Embedding(256, 32)
-        self.item_mlp = MLPBlock(2 * 32 + 12, layer_width, layer_width)
-        self.item_norm = torch.nn.LayerNorm(layer_width)
+        self.item_mlp = MLPBlock(2 * 32 + 12, output_size, output_size)
+        self.item_norm = torch.nn.LayerNorm(output_size)
 
         self.discrete_idxs = [1, 14]
         self.discrete_offset = torch.Tensor([2, 0])
@@ -231,10 +234,10 @@ class ItemEncoder(torch.nn.Module):
 
 
 class InventoryEncoder(torch.nn.Module):
-    def __init__(self, layer_width, inventory_size=12):
+    def __init__(self, output_size, inventory_size=12):
         super().__init__()
-        self.fc = torch.nn.Linear(inventory_size * layer_width, layer_width)
-        self.norm = torch.nn.LayerNorm(layer_width)
+        self.fc = torch.nn.Linear(inventory_size * output_size, output_size)
+        self.norm = torch.nn.LayerNorm(output_size)
         orthogonal_init(self.fc)
 
     def forward(self, inventory):
@@ -244,10 +247,10 @@ class InventoryEncoder(torch.nn.Module):
 
 
 class MarketEncoder(torch.nn.Module):
-    def __init__(self, layer_width):
+    def __init__(self, output_size):
         super().__init__()
-        self.fc = torch.nn.Linear(layer_width, layer_width)
-        self.norm = torch.nn.LayerNorm(layer_width)
+        self.fc = torch.nn.Linear(output_size, output_size)
+        self.norm = torch.nn.LayerNorm(output_size)
         orthogonal_init(self.fc)
 
     def forward(self, market):
@@ -255,10 +258,10 @@ class MarketEncoder(torch.nn.Module):
 
 
 class TaskEncoder(torch.nn.Module):
-    def __init__(self, layer_width, task_size):
+    def __init__(self, task_size, output_size):
         super().__init__()
-        self.fc = torch.nn.Linear(task_size, layer_width)
-        self.norm = torch.nn.LayerNorm(layer_width)
+        self.fc = torch.nn.Linear(task_size, output_size)
+        self.norm = torch.nn.LayerNorm(output_size)
         orthogonal_init(self.fc)
 
     def forward(self, task):
@@ -266,22 +269,22 @@ class TaskEncoder(torch.nn.Module):
 
 
 class ActionDecoder(torch.nn.Module):
-    def __init__(self, layer_width):
+    def __init__(self, input_size):
         super().__init__()
         self.layers = {
-            "attack_style": torch.nn.Linear(layer_width, 3),
-            "attack_target": torch.nn.Linear(layer_width, layer_width),
-            "market_buy": torch.nn.Linear(layer_width, layer_width),
-            "comm_token": torch.nn.Linear(layer_width, 127),
-            "inventory_destroy": torch.nn.Linear(layer_width, layer_width),
-            "inventory_give_item": torch.nn.Linear(layer_width, layer_width),
-            "inventory_give_player": torch.nn.Linear(layer_width, layer_width),
-            "gold_quantity": torch.nn.Linear(layer_width, 99),
-            "gold_target": torch.nn.Linear(layer_width, layer_width),
-            "move": torch.nn.Linear(layer_width, 5),
-            "inventory_sell": torch.nn.Linear(layer_width, layer_width),
-            "inventory_price": torch.nn.Linear(layer_width, 99),
-            "inventory_use": torch.nn.Linear(layer_width, layer_width),
+            "attack_style": torch.nn.Linear(input_size, 3),
+            "attack_target": torch.nn.Linear(input_size, input_size),
+            "market_buy": torch.nn.Linear(input_size, input_size),
+            "comm_token": torch.nn.Linear(input_size, 127),
+            "inventory_destroy": torch.nn.Linear(input_size, input_size),
+            "inventory_give_item": torch.nn.Linear(input_size, input_size),
+            "inventory_give_player": torch.nn.Linear(input_size, input_size),
+            "gold_quantity": torch.nn.Linear(input_size, 99),
+            "gold_target": torch.nn.Linear(input_size, input_size),
+            "move": torch.nn.Linear(input_size, 5),
+            "inventory_sell": torch.nn.Linear(input_size, input_size),
+            "inventory_price": torch.nn.Linear(input_size, 99),
+            "inventory_use": torch.nn.Linear(input_size, input_size),
         }
         for _, v in self.layers.items():
             orthogonal_init(v, gain=0.1)

@@ -7,7 +7,7 @@ from pettingzoo.utils.wrappers.base_parallel import BaseParallelWrapper
 import nmmo
 import nmmo.core.config as nc
 import nmmo.core.game_api as ng
-from nmmo.task import task_spec
+from nmmo.minigames import RacetoCenter, KingoftheHill, Sandwich, RadioRaid
 
 
 class TeamBattle(ng.TeamBattle):
@@ -16,11 +16,13 @@ class TeamBattle(ng.TeamBattle):
         self.config.set_for_episode("DEATH_FOG_SPEED", 1 / 6)
         self.config.set_for_episode("DEATH_FOG_FINAL_SIZE", 8)
 
-    def _define_tasks(self):
-        sampled_spec = self._get_cand_team_tasks(num_tasks=1, tags="team_battle")[0]
-        return task_spec.make_task_from_spec(
-            self.config.TEAMS, [sampled_spec] * len(self.config.TEAMS)
-        )
+
+class EasyKingoftheHill(KingoftheHill):
+    def _set_config(self):
+        super()._set_config()
+        # make the game easier by decreasing the resource demands/penalty
+        self.config.set_for_episode("RESOURCE_DEPLETION_RATE", 3)  # from 5
+        self.config.set_for_episode("RESOURCE_RESILIENT_POPULATION", 1)
 
 
 class MiniGameConfig(
@@ -38,6 +40,7 @@ class MiniGameConfig(
 
         self.set("PROVIDE_ACTION_TARGETS", True)
         self.set("PROVIDE_NOOP_ACTION_TARGET", True)
+        self.set("TASK_EMBED_DIM", 16)  # Use the default hash embedding provided by env
         self.set("MAP_FORCE_GENERATION", env_args.map_force_generation)
         self.set("PLAYER_N", env_args.num_agents)
         self.set("HORIZON", env_args.max_episode_length)
@@ -59,11 +62,13 @@ class MiniGameConfig(
         self.set("PATH_MAPS", f"{env_args.maps_path}/{env_args.map_size}/")
         self.set("MAP_CENTER", env_args.map_size)
         self.set("NPC_N", env_args.num_npcs)
-        self.set("TASK_EMBED_DIM", env_args.task_size)
         self.set("RESOURCE_RESILIENT_POPULATION", env_args.resilient_population)
         self.set("COMBAT_SPAWN_IMMUNITY", env_args.spawn_immunity)
 
-        self.set("GAME_PACKS", [(TeamBattle, 1)])
+        self.set(
+            "GAME_PACKS",
+            [(TeamBattle, 1), (RacetoCenter, 1), (KingoftheHill, 1), (Sandwich, 1), (RadioRaid, 1)],
+        )
         self.set("CURRICULUM_FILE_PATH", env_args.curriculum_file_path)
 
 
