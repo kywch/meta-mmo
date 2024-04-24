@@ -9,7 +9,7 @@ import numpy as np
 import pufferlib.policy_pool as pp
 from nmmo.render.replay_helper import FileReplayHelper
 
-from reinforcement_learning import clean_pufferl
+from reinforcement_learning import clean_pufferl, environment
 
 # Related to torch.use_deterministic_algorithms(True)
 # See also https://docs.nvidia.com/cuda/cublas/index.html#results-reproducibility
@@ -84,7 +84,65 @@ def sweep(args, env_creator, agent_creator):
     wandb.agent(sweep_id, main, count=20)
 
 
-def generate_replay(args, env_creator, agent_creator, game_creator, seed=None):
+def create_team_kernel(num_agents, team_dict, num_policies):
+    kernel = [0] * num_agents
+    for team_id, team in team_dict.items():
+        policy_id = (team_id % num_policies) + 1  # policy is 1-indexed
+        for agent_id in team:
+            kernel[agent_id - 1] = policy_id  # agent_id is 1-indexed
+    return kernel
+
+
+def make_game_creator(args, num_policies, sample_env):
+    kernel = None
+    if args.game is None:
+
+        def game_creator(env):
+            game = environment.TeamBattle(env)
+            return game
+
+    elif args.game == "race":  # Individual game
+        kernel = pp.create_kernel(args.env.num_agents, num_policies)
+
+        def game_creator(env):
+            game = environment.RacetoCenter(env)
+            game.set_map_size(128)
+            return game
+
+    elif args.game == "koh":
+
+        def game_creator(env):
+            game = environment.EasyKingoftheHill(env)
+            game.set_seize_duration(30)
+            return game
+
+    elif args.game == "sandwich":
+
+        def game_creator(env):
+            game = environment.Sandwich(env)
+            game.set_grass_map(True)
+            game.set_inner_npc_num(8)
+            return game
+
+    elif args.game == "radio":
+
+        def game_creator(env):
+            game = environment.RadioRaid(env)
+            game.set_grass_map(True)
+            game.set_goal_num_npc(50)
+            return game
+
+    else:
+        raise ValueError(f"Unknown game: {args.game}")
+
+    if kernel is None:
+        sample_game = game_creator(sample_env)
+        kernel = create_team_kernel(args.env.num_agents, sample_game.teams, num_policies)
+
+    return game_creator, kernel
+
+
+def generate_replay(args, env_creator, agent_creator, seed=None):
     assert args.eval_model_path is not None, "eval_model_path must be set for replay generation"
     policies = pp.get_policy_names(args.eval_model_path)
     assert len(policies) > 0, "No policies found in eval_model_path"
@@ -106,19 +164,18 @@ def generate_replay(args, env_creator, agent_creator, game_creator, seed=None):
     args.reward_wrapper.eval_mode = True
     args.reward_wrapper.early_stop_agent_num = 0
 
-    # Use the policy pool helper functions to create kernel (policy-agent mapping)
-    # TODO: Revisit shuffle for evaluation
-    args.train.pool_kernel = pp.create_kernel(
-        args.env.num_agents,
-        len(policies),  # , shuffle_with_seed=args.train.seed
-    )
+    # TODO: Revisit kernel shuffle for evaluation
+    env_creator_kwargs = {"env": args.env, "reward_wrapper": args.reward_wrapper}
+    sample_env = env_creator(**env_creator_kwargs).env.env  # get the nmmo env
+    game_creator, kernel = make_game_creator(args, len(policies), sample_env)
+    args.train.pool_kernel = kernel
 
     data = clean_pufferl.create(
         config=args.train,
         agent_creator=agent_creator,
         agent_kwargs={"args": args},
         env_creator=env_creator,
-        env_creator_kwargs={"env": args.env, "reward_wrapper": args.reward_wrapper},
+        env_creator_kwargs=env_creator_kwargs,
         eval_mode=True,
         eval_model_path=args.eval_model_path,
         policy_selector=pp.AllPolicySelector(args.train.seed),
@@ -128,7 +185,10 @@ def generate_replay(args, env_creator, agent_creator, game_creator, seed=None):
     replay_helper = FileReplayHelper()
     nmmo_env = data.pool.multi_envs[0].envs[0].env.env
     nmmo_env.realm.record_replay(replay_helper)
-    nmmo_env.reset(game=game_creator(nmmo_env), seed=seed or args.train.seed)
+
+    # Reset the reward wrapper with the correct game
+    reward_wrapper = data.pool.multi_envs[0].envs[0].env
+    reward_wrapper.reset(game=game_creator(nmmo_env), seed=seed or args.train.seed)
 
     # Resets the env
     o, r, d, t, i, env_id, mask = data.pool.recv()  # This resets the env

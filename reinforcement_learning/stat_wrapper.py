@@ -6,6 +6,8 @@ from nmmo.lib.event_code import EventCode
 import nmmo.systems.item as Item
 from nmmo.minigames import RacetoCenter, KingoftheHill, Sandwich, RadioRaid
 
+from reinforcement_learning.environment import TeamBattle
+
 
 class BaseStatWrapper(BaseParallelWrapper):
     def __init__(
@@ -61,7 +63,7 @@ class BaseStatWrapper(BaseParallelWrapper):
 
         # Stop early if there are too few agents generating the training data
         # Also env.agents is empty when the tick reaches the config horizon
-        if len(self.env.agents) <= self.early_stop_agent_num:
+        if len(self.env.agents) <= self.early_stop_agent_num or self.env.game.is_over:
             self.env_done = True
 
         # Modify reward and observation after they are returned from the environment
@@ -175,28 +177,30 @@ class BaseStatWrapper(BaseParallelWrapper):
         info["stats"]["task/completed"] = 1.0 if task.completed else 0.0
         info["stats"]["task/pcnt_2_reward_signal"] = 1.0 if task.reward_signal_count >= 2 else 0.0
         info["stats"]["task/pcnt_0p2_max_progress"] = 1.0 if task._max_progress >= 0.2 else 0.0
-        info["curriculum"] = {task.spec_name: (task._max_progress, task.reward_signal_count)}
+        # info["curriculum"] = {task.spec_name: (task._max_progress, task.reward_signal_count)}
 
         if self.eval_mode:
             # 'return' is used for ranking in the eval mode, so put the task progress here
             info["return"] = task._max_progress  # this is 1 if done
 
-        # Max combat/harvest level achieved
-        info["stats"]["achieved/max_combat_level"] = agent.attack_level
-        info["stats"]["achieved/max_harvest_skill_ammo"] = max(
-            agent.prospecting_level.val,
-            agent.carving_level.val,
-            agent.alchemy_level.val,
-        )
-        info["stats"]["achieved/max_harvest_skill_consum"] = max(
-            agent.fishing_level.val,
-            agent.herbalism_level.val,
-        )
+        # Log the below stats ONLY for the team battle
+        if isinstance(self.env.game, TeamBattle):
+            # Max combat/harvest level achieved
+            info["stats"]["achieved/max_combat_level"] = agent.attack_level
+            info["stats"]["achieved/max_harvest_skill_ammo"] = max(
+                agent.prospecting_level.val,
+                agent.carving_level.val,
+                agent.alchemy_level.val,
+            )
+            info["stats"]["achieved/max_harvest_skill_consum"] = max(
+                agent.fishing_level.val,
+                agent.herbalism_level.val,
+            )
 
-        # Event-based stats
-        achieved, performed, _ = process_event_log(realm, [agent_id])
-        for key, val in list(achieved.items()) + list(performed.items()):
-            info["stats"][key] = float(val)
+            # Event-based stats
+            achieved, performed, _ = process_event_log(realm, [agent_id])
+            for key, val in list(achieved.items()) + list(performed.items()):
+                info["stats"][key] = float(val)
 
         if self._stat_prefix:
             info = {self._stat_prefix: info}
