@@ -84,14 +84,15 @@ class FullGameConfig(
 
 
 def make_env_creator(
-    reward_wrapper_cls: BaseParallelWrapper, config_scope: str = None, game_cls: ng.Game = None
+    reward_wrapper_cls: BaseParallelWrapper, use_mini: bool = False, game_cls: ng.Game = None
 ):
     def env_creator(*args, **kwargs):
         """Create an environment."""
         # args.env is provided as kwargs
-        config = FullGameConfig(kwargs["env"])
-        if config_scope == "mini":
+        if use_mini is True:
             config = MiniGameConfig(kwargs["env"])
+        else:
+            config = FullGameConfig(kwargs["env"])
 
         # Default game is TeamBattle
         if game_cls and isinstance(game_cls, ng.Game):

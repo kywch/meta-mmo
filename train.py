@@ -56,13 +56,16 @@ def get_init_args(fn):
 
 
 # Return env_creator, agent_creator
-def setup_agent(module_name):
+def setup_agent(module_name, use_mini=None):
     try:
         agent_module = importlib.import_module(f"agent_zoo.{module_name}")
     except ModuleNotFoundError:
         raise ValueError(f"Agent module {module_name} not found under the agent_zoo directory.")
 
-    env_creator = environment.make_env_creator(reward_wrapper_cls=agent_module.RewardWrapper)
+    env_creator = environment.make_env_creator(
+        reward_wrapper_cls=agent_module.RewardWrapper,
+        use_mini=use_mini,
+    )
 
     recurrent_policy = getattr(agent_module, "Recurrent", None)
 
@@ -173,6 +176,9 @@ if __name__ == "__main__":
         "-p", "--eval-model-path", type=str, default=None, help="Path to model to evaluate"
     )
     parser.add_argument(
+        "-g", "--game", type=str, default=None, choices="race koh sandwich radio".split()
+    )
+    parser.add_argument(
         "-c", "--curriculum", type=str, default=BASELINE_CURRICULUM, help="Path to curriculum file"
     )
     parser.add_argument(
@@ -189,13 +195,16 @@ if __name__ == "__main__":
         default="multiprocessing",
         choices="serial multiprocessing ray".split(),
     )
+    parser.add_argument("--use-mini", action="store_true", help="Use mini game config")
     parser.add_argument("--no-recurrence", action="store_true", help="Do not use recurrence")
     parser.add_argument("--no-track", action="store_true", help="Do NOT track on WandB")
     parser.add_argument("--debug", action="store_true", help="Debug mode")
 
     args = parser.parse_known_args()[0].__dict__
     config = load_from_config(args["agent"], debug=args.get("debug", False))
-    agent_module, env_creator, agent_creator, init_args = setup_agent(args["agent"])
+    agent_module, env_creator, agent_creator, init_args = setup_agent(
+        args["agent"], args["use_mini"]
+    )
 
     # Update config with environment defaults
     config.policy = {**init_args["policy"], **config.policy}

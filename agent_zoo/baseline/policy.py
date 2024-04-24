@@ -26,19 +26,28 @@ class Policy(pufferlib.models.Policy):
         super().__init__(env)
 
         self.unflatten_context = env.unflatten_context
+        self.enabled_systems = env.env.config.enabled_systems
 
         # NOTE: Models with different task size will not be compatible with each other
         task_size = self.unflatten_context.flat_observation_space["DTask.V"].shape[0]
 
         self.tile_encoder = TileEncoder(layer_width)
         self.player_encoder = PlayerEncoder(layer_width)
-        self.item_encoder = ItemEncoder(layer_width)
-        self.inventory_encoder = InventoryEncoder(layer_width)
-        self.market_encoder = MarketEncoder(layer_width)
         self.task_encoder = TaskEncoder(task_size, layer_width)
-        self.proj_fc = torch.nn.Linear(5 * layer_width, layer_width)
-        self.action_decoder = ActionDecoder(layer_width)
+        self.item_encoder = ItemEncoder(layer_width) if "ITEM" in self.enabled_systems else None
+        self.inventory_encoder = (
+            InventoryEncoder(layer_width) if "ITEM" in self.enabled_systems else None
+        )
+        self.market_encoder = (
+            MarketEncoder(layer_width) if "EXCHANGE" in self.enabled_systems else None
+        )
+
+        num_encoder = 3 + ("ITEM" in self.enabled_systems) + ("EXCHANGE" in self.enabled_systems)
+        self.proj_fc = torch.nn.Linear(num_encoder * layer_width, layer_width)
+
+        self.action_decoder = ActionDecoder(layer_width, self.enabled_systems)
         self.value_head = torch.nn.Linear(layer_width, 1)
+
         orthogonal_init(self.proj_fc)
         orthogonal_init(self.value_head)
 
@@ -46,20 +55,30 @@ class Policy(pufferlib.models.Policy):
         env_outputs = pufferlib.emulation.unpack_batched_obs(
             flat_observations, self.unflatten_context
         )
+
+        encoded_obs = []
+
         tile = self.tile_encoder(env_outputs["Tile"])
         player_embeddings, my_agent = self.player_encoder(
             env_outputs["Entity"], env_outputs["AgentId"][:, 0]
         )
+        encoded_obs += [tile, my_agent]
 
-        item_embeddings = self.item_encoder(env_outputs["Inventory"])
-        inventory = self.inventory_encoder(item_embeddings)
+        item_embeddings = None
+        if "ITEM" in self.enabled_systems:
+            item_embeddings = self.item_encoder(env_outputs["Inventory"])
+            inventory = self.inventory_encoder(item_embeddings)
+            encoded_obs.append(inventory)
 
-        market_embeddings = self.item_encoder(env_outputs["Market"])
-        market = self.market_encoder(market_embeddings)
+        market_embeddings = None
+        if "EXCHANGE" in self.enabled_systems:
+            market_embeddings = self.item_encoder(env_outputs["Market"])
+            market = self.market_encoder(market_embeddings)
+            encoded_obs.append(market)
 
-        task = self.task_encoder(env_outputs["Task"])
+        encoded_obs.append(self.task_encoder(env_outputs["Task"]))
 
-        obs = torch.cat([tile, my_agent, inventory, market, task], dim=-1)
+        obs = torch.cat(encoded_obs, dim=-1)
         obs = F.relu(self.proj_fc(obs))
 
         return obs, (
@@ -269,7 +288,7 @@ class TaskEncoder(torch.nn.Module):
 
 
 class ActionDecoder(torch.nn.Module):
-    def __init__(self, input_size):
+    def __init__(self, input_size, enabled_systems):
         super().__init__()
         self.layers = {
             "attack_style": torch.nn.Linear(input_size, 3),
@@ -286,6 +305,22 @@ class ActionDecoder(torch.nn.Module):
             "inventory_price": torch.nn.Linear(input_size, 99),
             "inventory_use": torch.nn.Linear(input_size, input_size),
         }
+
+        self.item_enabled = "ITEM" in enabled_systems
+        if self.item_enabled is False:
+            self.layers.pop("inventory_destroy")
+            self.layers.pop("inventory_give_item")
+            self.layers.pop("inventory_give_player")
+            self.layers.pop("inventory_use")
+
+        self.market_enabled = "EXCHANGE" in enabled_systems
+        if self.market_enabled is False:
+            self.layers.pop("market_buy")
+            self.layers.pop("gold_quantity")
+            self.layers.pop("gold_target")
+            self.layers.pop("inventory_sell")
+            self.layers.pop("inventory_price")
+
         for _, v in self.layers.items():
             orthogonal_init(v, gain=0.1)
         self.layers = torch.nn.ModuleDict(self.layers)
@@ -322,17 +357,25 @@ class ActionDecoder(torch.nn.Module):
         action_targets = {
             "attack_style": action_targets["Attack"]["Style"],
             "attack_target": action_targets["Attack"]["Target"],
-            "market_buy": action_targets["Buy"]["MarketItem"],
+            "market_buy": action_targets["Buy"]["MarketItem"] if self.market_enabled else None,
             "comm_token": action_targets["Comm"]["Token"],
-            "inventory_destroy": action_targets["Destroy"]["InventoryItem"],
-            "inventory_give_item": action_targets["Give"]["InventoryItem"],
-            "inventory_give_player": action_targets["Give"]["Target"],
-            "gold_quantity": action_targets["GiveGold"]["Price"],
-            "gold_target": action_targets["GiveGold"]["Target"],
+            "inventory_destroy": action_targets["Destroy"]["InventoryItem"]
+            if self.item_enabled
+            else None,
+            "inventory_give_item": action_targets["Give"]["InventoryItem"]
+            if self.item_enabled
+            else None,
+            "inventory_give_player": action_targets["Give"]["Target"]
+            if self.item_enabled
+            else None,
+            "gold_quantity": action_targets["GiveGold"]["Price"] if self.market_enabled else None,
+            "gold_target": action_targets["GiveGold"]["Target"] if self.market_enabled else None,
             "move": action_targets["Move"]["Direction"],
-            "inventory_sell": action_targets["Sell"]["InventoryItem"],
-            "inventory_price": action_targets["Sell"]["Price"],
-            "inventory_use": action_targets["Use"]["InventoryItem"],
+            "inventory_sell": action_targets["Sell"]["InventoryItem"]
+            if self.market_enabled
+            else None,
+            "inventory_price": action_targets["Sell"]["Price"] if self.market_enabled else None,
+            "inventory_use": action_targets["Use"]["InventoryItem"] if self.item_enabled else None,
         }
 
         # Pass the LSTM output through a ReLU

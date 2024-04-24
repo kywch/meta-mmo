@@ -2,16 +2,12 @@ import os
 import time
 import logging
 
-import dill
 import wandb
-
 import torch
 import numpy as np
 
 import pufferlib.policy_pool as pp
-
 from nmmo.render.replay_helper import FileReplayHelper
-from nmmo.task.task_spec import make_task_from_spec
 
 from reinforcement_learning import clean_pufferl
 
@@ -88,7 +84,7 @@ def sweep(args, env_creator, agent_creator):
     wandb.agent(sweep_id, main, count=20)
 
 
-def generate_replay(args, env_creator, agent_creator, stop_when_all_complete_task=True, seed=None):
+def generate_replay(args, env_creator, agent_creator, game_creator, seed=None):
     assert args.eval_model_path is not None, "eval_model_path must be set for replay generation"
     policies = pp.get_policy_names(args.eval_model_path)
     assert len(policies) > 0, "No policies found in eval_model_path"
@@ -128,11 +124,14 @@ def generate_replay(args, env_creator, agent_creator, stop_when_all_complete_tas
         policy_selector=pp.AllPolicySelector(args.train.seed),
     )
 
-    # Set up the replay helper
-    o, r, d, t, i, env_id, mask = data.pool.recv()  # This resets the env
+    # Set up the game and replay helper
     replay_helper = FileReplayHelper()
     nmmo_env = data.pool.multi_envs[0].envs[0].env.env
     nmmo_env.realm.record_replay(replay_helper)
+    nmmo_env.reset(game=game_creator(nmmo_env), seed=seed or args.train.seed)
+
+    # Resets the env
+    o, r, d, t, i, env_id, mask = data.pool.recv()  # This resets the env
 
     # Sanity checks for replay generation
     assert len(policies) == len(data.policy_pool.current_policies), "Policy count mismatch"
@@ -148,23 +147,26 @@ def generate_replay(args, env_creator, agent_creator, stop_when_all_complete_tas
 
     # Assign the specified task to the agents, if provided
     if args.task_to_assign is not None:
-        with open(args.curriculum, "rb") as f:
-            task_with_embedding = dill.load(f)  # a list of TaskSpec
-        assert 0 <= args.task_to_assign < len(task_with_embedding), "Task index out of range"
-        select_task = task_with_embedding[args.task_to_assign]
-        tasks = make_task_from_spec(
-            nmmo_env.possible_agents, [select_task] * len(nmmo_env.possible_agents)
-        )
+        raise NotImplementedError
 
-        # Reassign the task to the agents
-        nmmo_env.tasks = tasks
-        nmmo_env._map_task_to_agent()  # update agent_task_map
-        for agent_id in nmmo_env.possible_agents:
-            # task_spec must have tasks for all agents, otherwise it will cause an error
-            task_embedding = nmmo_env.agent_task_map[agent_id][0].embedding
-            nmmo_env.obs[agent_id].gym_obs.reset(task_embedding)
+        # NOTE: This is for the case where the curriculum file is provided
+        # with open(args.curriculum, "rb") as f:
+        #     task_with_embedding = dill.load(f)  # a list of TaskSpec
+        # assert 0 <= args.task_to_assign < len(task_with_embedding), "Task index out of range"
+        # select_task = task_with_embedding[args.task_to_assign]
+        # tasks = make_task_from_spec(
+        #     nmmo_env.possible_agents, [select_task] * len(nmmo_env.possible_agents)
+        # )
 
-        print(f"All agents are assigned: {nmmo_env.tasks[0].spec_name}\n")
+        # # Reassign the task to the agents
+        # nmmo_env.tasks = tasks
+        # nmmo_env._map_task_to_agent()  # update agent_task_map
+        # for agent_id in nmmo_env.possible_agents:
+        #     # task_spec must have tasks for all agents, otherwise it will cause an error
+        #     task_embedding = nmmo_env.agent_task_map[agent_id][0].embedding
+        #     nmmo_env.obs[agent_id].gym_obs.reset(task_embedding)
+
+        # print(f"All agents are assigned: {nmmo_env.tasks[0].spec_name}\n")
 
     # Generate the replay
     replay_helper.reset()
@@ -221,7 +223,7 @@ def generate_replay(args, env_creator, agent_creator, stop_when_all_complete_tas
     print(f"Average completed tick: {avg_completed_tick:.1f}")
 
     # Save the replay file
-    replay_file = f"replay_seed_{args.train.seed}_"
+    replay_file = f"{nmmo_env.game.name.lower()}_seed_{args.train.seed}_"
     if args.task_to_assign is not None:
         replay_file += f"task_{args.task_to_assign}_"
     replay_file = os.path.join(save_dir, replay_file + time.strftime("%Y%m%d_%H%M%S"))
