@@ -67,7 +67,13 @@ class MiniGameConfig(
 
         self.set(
             "GAME_PACKS",
-            [(TeamBattle, 1), (RacetoCenter, 1), (KingoftheHill, 1), (Sandwich, 1), (RadioRaid, 1)],
+            [
+                (TeamBattle, 10),
+                (RacetoCenter, 1),
+                (KingoftheHill, 1),
+                (Sandwich, 1),
+                (RadioRaid, 1),
+            ],
         )
         self.set("CURRICULUM_FILE_PATH", env_args.curriculum_file_path)
 

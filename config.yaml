@@ -18,12 +18,12 @@ train:
   seed: 1
   torch_deterministic: True
   device: cuda
-  total_timesteps: 10_000_000
+  total_timesteps: 100_000_000
   learning_rate: 1.0e-4
   anneal_lr: True
   gamma: 0.99
   gae_lambda: 0.95
-  update_epochs: 3
+  update_epochs: 2
   norm_adv: True
   clip_coef: 0.1
   clip_vloss: True
