@@ -123,6 +123,18 @@ def make_env_creator(
     train_flag: str = None,
     use_mini: bool = False,
 ):
+    if train_flag is None:
+        game_packs = [
+            (TeamBattle, 10),
+            (minigames.RacetoCenter, 1),
+            (EasyKingoftheHill, 1),
+            (Sandwich, 1),
+        ]
+    elif train_flag == "tb_only":
+        game_packs = [(TeamBattle, 1)]
+    else:
+        raise ValueError(f"Invalid train_flag: {train_flag}")
+
     def env_creator(*args, **kwargs):
         """Create an environment."""
         # args.env is provided as kwargs
@@ -130,18 +142,6 @@ def make_env_creator(
             config = MiniGameConfig(kwargs["env"])
         else:
             config = FullGameConfig(kwargs["env"])
-
-        if train_flag is None:
-            game_packs = [
-                (TeamBattle, 10),
-                (minigames.RacetoCenter, 1),
-                (EasyKingoftheHill, 1),
-                (Sandwich, 1),
-            ]
-        elif train_flag == "tb_only":
-            game_packs = [(TeamBattle, 1)]
-        else:
-            raise ValueError(f"Invalid train_flag: {train_flag}")
         config.set("GAME_PACKS", game_packs)
 
         env = nmmo.Env(config)

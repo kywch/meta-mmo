@@ -26,6 +26,7 @@ def init_wandb(args, resume=True):
         "project": args.wandb.project,
         "entity": args.wandb.entity,
         "config": {
+            "train_flag": args.train_flag,
             "cleanrl": args.train,
             "env": args.env,
             "agent_zoo": args.agent,
