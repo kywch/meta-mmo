@@ -103,7 +103,8 @@ class MiniGameConfig(
         self.set("RESOURCE_RESILIENT_POPULATION", env_args.resilient_population)
         self.set("COMBAT_SPAWN_IMMUNITY", env_args.spawn_immunity)
 
-        self.set("CURRICULUM_FILE_PATH", env_args.curriculum_file_path)
+        # NOTE: Disabling curriculum file for now
+        # self.set("CURRICULUM_FILE_PATH", env_args.curriculum_file_path)
 
 
 class FullGameConfig(
