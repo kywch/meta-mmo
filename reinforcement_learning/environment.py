@@ -103,16 +103,6 @@ class MiniGameConfig(
         self.set("RESOURCE_RESILIENT_POPULATION", env_args.resilient_population)
         self.set("COMBAT_SPAWN_IMMUNITY", env_args.spawn_immunity)
 
-        self.set(
-            "GAME_PACKS",
-            [
-                (TeamBattle, 10),
-                (minigames.RacetoCenter, 1),
-                (EasyKingoftheHill, 1),
-                (Sandwich, 1),
-                # (RadioRaid, 1),
-            ],
-        )
         self.set("CURRICULUM_FILE_PATH", env_args.curriculum_file_path)
 
 
@@ -128,7 +118,9 @@ class FullGameConfig(
 
 
 def make_env_creator(
-    reward_wrapper_cls: BaseParallelWrapper, use_mini: bool = False, game_cls: ng.Game = None
+    reward_wrapper_cls: BaseParallelWrapper,
+    train_flag: str = None,
+    use_mini: bool = False,
 ):
     def env_creator(*args, **kwargs):
         """Create an environment."""
@@ -138,9 +130,18 @@ def make_env_creator(
         else:
             config = FullGameConfig(kwargs["env"])
 
-        # Default game is TeamBattle
-        if game_cls and isinstance(game_cls, ng.Game):
-            config.set("GAME_PACKS", [(game_cls, 1)])
+        if train_flag is None:
+            game_packs = [
+                (TeamBattle, 10),
+                (minigames.RacetoCenter, 1),
+                (EasyKingoftheHill, 1),
+                (Sandwich, 1),
+            ]
+        elif train_flag == "tb_only":
+            game_packs = [(TeamBattle, 1)]
+        else:
+            raise ValueError(f"Invalid train_flag: {train_flag}")
+        config.set("GAME_PACKS", game_packs)
 
         env = nmmo.Env(config)
         env = reward_wrapper_cls(env, **kwargs["reward_wrapper"])

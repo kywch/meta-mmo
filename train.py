@@ -56,7 +56,7 @@ def get_init_args(fn):
 
 
 # Return env_creator, agent_creator
-def setup_agent(module_name, use_mini=None):
+def setup_agent(module_name, train_flag=None, use_mini=None):
     try:
         agent_module = importlib.import_module(f"agent_zoo.{module_name}")
     except ModuleNotFoundError:
@@ -64,6 +64,7 @@ def setup_agent(module_name, use_mini=None):
 
     env_creator = environment.make_env_creator(
         reward_wrapper_cls=agent_module.RewardWrapper,
+        train_flag=train_flag,
         use_mini=use_mini,
     )
 
@@ -119,7 +120,7 @@ def update_args(args, mode=None):
     args = pufferlib.namespace(**args)
 
     args.track = not args.no_track
-    args.env.curriculum_file_path = args.curriculum
+    # args.env.curriculum_file_path = args.curriculum
 
     vec = args.vectorization
     if vec == "serial" or args.debug:
@@ -170,24 +171,32 @@ if __name__ == "__main__":
     )
     parser.add_argument("-a", "--agent", type=str, default="baseline", help="Agent module to use")
     parser.add_argument(
+        "-t", "--train-flag", type=str, default=None, help="Training game pack flag"
+    )
+    parser.add_argument(
         "-n", "--exp-name", type=str, default=None, help="Need exp name to resume the experiment"
     )
     parser.add_argument(
         "-p", "--eval-model-path", type=str, default=None, help="Path to model to evaluate"
     )
     parser.add_argument(
-        "-g", "--game", type=str, default=None, choices="race koh sandwich radio".split()
-    )
-    parser.add_argument(
-        "-c", "--curriculum", type=str, default=BASELINE_CURRICULUM, help="Path to curriculum file"
-    )
-    parser.add_argument(
-        "-t",
-        "--task-to-assign",
-        type=int,
+        "-g",
+        "--game",
+        type=str,
         default=None,
-        help="The index of the task to assign in the curriculum file",
+        choices="race koh sandwich radio".split(),
+        help="Game to evaluate/replay",
     )
+    # parser.add_argument(
+    #     "-c", "--curriculum", type=str, default=BASELINE_CURRICULUM, help="Path to curriculum file"
+    # )
+    # parser.add_argument(
+    #     "-t",
+    #     "--task-to-assign",
+    #     type=int,
+    #     default=None,
+    #     help="The index of the task to assign in the curriculum file",
+    # )
     # parser.add_argument('--baseline', action='store_true', help='Baseline run')
     parser.add_argument(
         "--vectorization",
@@ -203,7 +212,7 @@ if __name__ == "__main__":
     args = parser.parse_known_args()[0].__dict__
     config = load_from_config(args["agent"], debug=args.get("debug", False))
     agent_module, env_creator, agent_creator, init_args = setup_agent(
-        args["agent"], args["use_mini"]
+        args["agent"], args["train_flag"], args["use_mini"]
     )
 
     # Update config with environment defaults
