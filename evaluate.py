@@ -15,7 +15,6 @@ from agent_zoo import baseline as default_learner
 from train import get_init_args
 from train_helper import make_game_creator
 
-NUM_AGENTS = 128
 NUM_PVP_EVAL_EPISODE = 200
 GAME_CLS = {
     "battle": environment.TeamBattle,
@@ -148,7 +147,7 @@ class EvalRunner:
         config = get_eval_config(debug)
         # add required configs
         config["torch_deterministic"] = True
-        config["total_timesteps"] = 100_000_000  # arbitrarily large, but will end much earlier
+        config["total_timesteps"] = 1_000_000_000  # arbitrarily large, but will end much earlier
         config["envs_per_batch"] = config["num_envs"]
         config["envs_per_worker"] = 1
         config["env_pool"] = False  # NOTE: critical for determinism
