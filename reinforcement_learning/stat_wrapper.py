@@ -16,6 +16,7 @@ class BaseStatWrapper(BaseParallelWrapper):
         eval_mode=False,
         early_stop_agent_num=0,
         stat_prefix=None,
+        use_custom_reward=True,
     ):
         super().__init__(env)
         self.env_done = False
@@ -23,6 +24,7 @@ class BaseStatWrapper(BaseParallelWrapper):
         self.eval_mode = eval_mode
         self._reset_episode_stats()
         self._stat_prefix = stat_prefix
+        self.use_custom_reward = use_custom_reward
 
     def observation(self, agent_id, agent_obs):
         """Called before observations are returned from the environment
@@ -72,9 +74,16 @@ class BaseStatWrapper(BaseParallelWrapper):
             trunc, info = self._process_stats_and_early_stop(
                 agent_id, rewards[agent_id], terms[agent_id], truncs[agent_id], infos[agent_id]
             )
-            rew, term, trunc, info = self.reward_terminated_truncated_info(
-                agent_id, rewards[agent_id], terms[agent_id], trunc, info
-            )
+
+            if self.use_custom_reward is True:
+                rew, term, trunc, info = self.reward_terminated_truncated_info(
+                    agent_id, rewards[agent_id], terms[agent_id], trunc, info
+                )
+            else:
+                # NOTE: Also disable death penalty, which is not from the task
+                rew = 0 if terms[agent_id] is True else rewards[agent_id]
+                term = terms[agent_id]
+
             rewards[agent_id] = rew
             terms[agent_id] = term
             truncs[agent_id] = trunc
@@ -82,13 +91,29 @@ class BaseStatWrapper(BaseParallelWrapper):
             obs[agent_id] = self.observation(agent_id, obs[agent_id])
 
         if self.env_done:
-            # To mark the end of the episode. Only one agent's done flag is enough.
+            # Hack: To mark the end of the episode. Only one agent's done flag is enough.
             infos[agent_id]["episode_done"] = True
+
+            game_scores = []
+            for task in self.env.tasks:
+                for a_id in task.assignee:
+                    # Max progress is a float between 0 and 1
+                    score = task._max_progress
+                    if self.env.game.winners and a_id in self.env.game.winners:
+                        # Extra +2 for winning -- a heuristic to mark the winner policy
+                        score += 2
+
+                    # NOTE: avoiding dict to bypass clean_pufferl's unroll_nested_dict
+                    game_scores.append((a_id, score))
+
+            # Hack: Putting the results in only one agent's info
+            infos[agent_id]["game_scores"] = game_scores
 
             game_name = self.env.game.__class__.__name__
             for key, val in self.env.game.get_episode_stats().items():
                 info["stats"][game_name + "/" + key] = val
             info["stats"][game_name + "/finished_tick"] = self.env.realm.tick
+
             if self.env.game.winners:
                 info["stats"][game_name + "/winning_score"] = self.env.game.winning_score
 

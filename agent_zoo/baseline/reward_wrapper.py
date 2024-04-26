@@ -16,6 +16,9 @@ class RewardWrapper(TeamWrapper):
         eval_mode=False,
         early_stop_agent_num=0,
         stat_prefix=None,
+        use_custom_reward=True,
+        # TeamWrapper args
+        augment_obs=False,
         # Custom reward wrapper args
         game_lost_penalty=-1.0,
         game_won_reward=None,
@@ -26,7 +29,9 @@ class RewardWrapper(TeamWrapper):
         gold_bonus_weight=0,
         nontask_bonus_scale=1,
     ):
-        super().__init__(env, eval_mode, early_stop_agent_num, stat_prefix)
+        super().__init__(
+            env, eval_mode, early_stop_agent_num, stat_prefix, use_custom_reward, augment_obs
+        )
         self.stat_prefix = stat_prefix
         self.game_lost_penalty = game_lost_penalty
         self.game_won_reward = game_won_reward  # if None, use the default game winning score

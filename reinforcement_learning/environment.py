@@ -31,6 +31,11 @@ class TeamBattle(ng.TeamBattle):
         self.config.set_for_episode("DEATH_FOG_FINAL_SIZE", 8)
 
 
+class RacetoCenter(minigames.RacetoCenter):
+    # Use the same setting as the original
+    pass
+
+
 class EasyKingoftheHill(minigames.KingoftheHill):
     def _set_config(self):
         super()._set_config()
@@ -126,7 +131,7 @@ def make_env_creator(
     if train_flag is None:
         game_packs = [
             (TeamBattle, 10),
-            (minigames.RacetoCenter, 1),
+            (RacetoCenter, 1),
             (EasyKingoftheHill, 1),
             (Sandwich, 1),
         ]

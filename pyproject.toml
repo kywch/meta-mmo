@@ -1,3 +1,6 @@
+[build-system]
+requires = ["cython>=3.0", "pip>=23.0", "setuptools>=61.0", "wheel"]
+
 [project]
 name = "nmmo2-team"
 version = "0.0.1"
@@ -13,6 +16,7 @@ classifiers = [
 ]
 dependencies = [
     "accelerate==0.27.2",
+    "cython",
     "nmmo@git+https://github.com/kywch/nmmo-environment",  # WIP nmmo 2.1
     "polars",
     "pufferlib[nmmo]==0.7.3",

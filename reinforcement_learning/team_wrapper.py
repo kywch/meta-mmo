@@ -8,10 +8,32 @@ from .stat_wrapper import BaseStatWrapper
 EntityAttr = EntityState.State.attr_name_to_col
 
 
+# # TODO: Implement realikun-style obs augmentation
+# from nmmo.lib import material
+# import reinforcement_learning.wrapper_helper as whp
+# IMPASSIBLE = list(material.Impassible.indices)
+# PASSIVE_REPR = 1  # matched to npc_type
+# NEUTRAL_REPR = 2
+# HOSTILE_REPR = 3
+# ENEMY_REPR = 4
+# DESTROY_TARGET_REPR = 5
+# TEAMMATE_REPR = 6
+PROTECT_TARGET_REPR = 7
+
+
 class TeamWrapper(BaseStatWrapper):
-    def __init__(self, env, eval_mode=False, early_stop_agent_num=0, stat_prefix=None):
-        super().__init__(env, eval_mode, early_stop_agent_num, stat_prefix)
+    def __init__(
+        self,
+        env,
+        eval_mode=False,
+        early_stop_agent_num=0,
+        stat_prefix=None,
+        use_custom_reward=True,
+        augment_obs=True,
+    ):
+        super().__init__(env, eval_mode, early_stop_agent_num, stat_prefix, use_custom_reward)
         self.config = env.config
+        self._augment_obs = augment_obs
 
         # Team/agent, system states, task embedding
         self._task = {}
@@ -21,6 +43,12 @@ class TeamWrapper(BaseStatWrapper):
             )
             for agent_id in self.env.possible_agents
         }
+
+        # # TODO: Used for tile obs augmentation
+        # self._entity_obs = None  # placeholder
+        # self._entity_map = np.zeros((self.config.MAP_SIZE, self.config.MAP_SIZE), dtype=np.int16)
+        # self._rally_map = np.zeros((self.config.MAP_SIZE, self.config.MAP_SIZE), dtype=np.int16)
+        # self._rally_target = None
 
         # Dist map should not change from episode to episode
         self._dist_map = np.zeros((self.config.MAP_SIZE, self.config.MAP_SIZE), dtype=np.int16)
@@ -36,12 +64,30 @@ class TeamWrapper(BaseStatWrapper):
         obs_space["Task"] = gym.spaces.Box(
             low=-(2**15), high=2**15 - 1, dtype=np.float16, shape=self._task_obs[1].shape
         )
+
+        # if self._augment_obs:
+        #     obs_space["Tile"] = gym.spaces.Box(
+        #         low=0, high=2**15 - 1, dtype=np.float16, shape=(self.config.MAP_SIZE, self.config.MAP_SIZE)
+        #     )
+
         return obs_space
 
     def reset(self, **kwargs):
         """Called at the start of each episode"""
         obs, info = super().reset(**kwargs)
         obs = self._reset_team_vars(obs)
+
+        # # Set the task-related vars for obs augmentation
+        # if self._augment_obs:
+        #     self._rally_target = None
+        #     self._rally_map[:] = 0
+        #     if self._task[1] is not None:
+        #         task_name = self._task[1].name
+        #         # NOTE: Assume the mini games assign the same task for all agents
+        #         if "SeizeCenter" in task_name or "ProgressTowardCenter" in task_name:
+        #             self._rally_target = self.env.realm.map.center_coord
+        #             self._rally_map[self._rally_target] = 1
+
         return obs, info
 
     def _reset_team_vars(self, obs):

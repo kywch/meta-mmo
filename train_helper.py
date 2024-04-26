@@ -94,30 +94,31 @@ def create_team_kernel(num_agents, team_dict, num_policies):
     return kernel
 
 
-def make_game_creator(args, num_policies, sample_env):
+def make_game_creator(game, num_policies, sample_env):
     kernel = None
-    if args.game is None:
+    num_agents = len(sample_env.possible_agents)
+    if game is None or game == "battle":
 
         def game_creator(env):
             game = environment.TeamBattle(env)
             return game
 
-    elif args.game == "race":  # Individual game
-        kernel = pp.create_kernel(args.env.num_agents, num_policies)
+    elif game == "race":  # Individual game
+        kernel = pp.create_kernel(num_agents, num_policies)
 
         def game_creator(env):
             game = environment.RacetoCenter(env)
             game.set_map_size(128)
             return game
 
-    elif args.game == "koh":
+    elif game == "koh":
 
         def game_creator(env):
             game = environment.EasyKingoftheHill(env)
             game.set_seize_duration(30)
             return game
 
-    elif args.game == "sandwich":
+    elif game == "sandwich":
 
         def game_creator(env):
             game = environment.Sandwich(env)
@@ -125,7 +126,7 @@ def make_game_creator(args, num_policies, sample_env):
             game.set_inner_npc_num(8)
             return game
 
-    elif args.game == "radio":
+    elif game == "radio":
 
         def game_creator(env):
             game = environment.RadioRaid(env)
@@ -134,11 +135,11 @@ def make_game_creator(args, num_policies, sample_env):
             return game
 
     else:
-        raise ValueError(f"Unknown game: {args.game}")
+        raise ValueError(f"Unknown game: {game}")
 
     if kernel is None:
         sample_game = game_creator(sample_env)
-        kernel = create_team_kernel(args.env.num_agents, sample_game.teams, num_policies)
+        kernel = create_team_kernel(num_agents, sample_game.teams, num_policies)
 
     return game_creator, kernel
 
@@ -168,7 +169,7 @@ def generate_replay(args, env_creator, agent_creator, seed=None):
     # TODO: Revisit kernel shuffle for evaluation
     env_creator_kwargs = {"env": args.env, "reward_wrapper": args.reward_wrapper}
     sample_env = env_creator(**env_creator_kwargs).env.env  # get the nmmo env
-    game_creator, kernel = make_game_creator(args, len(policies), sample_env)
+    game_creator, kernel = make_game_creator(args.game, len(policies), sample_env)
     args.train.pool_kernel = kernel
 
     data = clean_pufferl.create(
@@ -206,28 +207,29 @@ def generate_replay(args, env_creator, agent_creator, seed=None):
                 agent_id = idx + 1  # agents are 0-indexed in policy_pool, but 1-indexed in nmmo
                 nmmo_env.realm.players[agent_id].name += f"-({policy_name})"
 
+    # NOTE: Disable for now
     # Assign the specified task to the agents, if provided
-    if args.task_to_assign is not None:
-        raise NotImplementedError
+    # if args.task_to_assign is not None:
+    #     raise NotImplementedError
 
-        # NOTE: This is for the case where the curriculum file is provided
-        # with open(args.curriculum, "rb") as f:
-        #     task_with_embedding = dill.load(f)  # a list of TaskSpec
-        # assert 0 <= args.task_to_assign < len(task_with_embedding), "Task index out of range"
-        # select_task = task_with_embedding[args.task_to_assign]
-        # tasks = make_task_from_spec(
-        #     nmmo_env.possible_agents, [select_task] * len(nmmo_env.possible_agents)
-        # )
+    #     # NOTE: This is for the case where the curriculum file is provided
+    #     with open(args.curriculum, "rb") as f:
+    #         task_with_embedding = dill.load(f)  # a list of TaskSpec
+    #     assert 0 <= args.task_to_assign < len(task_with_embedding), "Task index out of range"
+    #     select_task = task_with_embedding[args.task_to_assign]
+    #     tasks = make_task_from_spec(
+    #         nmmo_env.possible_agents, [select_task] * len(nmmo_env.possible_agents)
+    #     )
 
-        # # Reassign the task to the agents
-        # nmmo_env.tasks = tasks
-        # nmmo_env._map_task_to_agent()  # update agent_task_map
-        # for agent_id in nmmo_env.possible_agents:
-        #     # task_spec must have tasks for all agents, otherwise it will cause an error
-        #     task_embedding = nmmo_env.agent_task_map[agent_id][0].embedding
-        #     nmmo_env.obs[agent_id].gym_obs.reset(task_embedding)
+    #     # Reassign the task to the agents
+    #     nmmo_env.tasks = tasks
+    #     nmmo_env._map_task_to_agent()  # update agent_task_map
+    #     for agent_id in nmmo_env.possible_agents:
+    #         # task_spec must have tasks for all agents, otherwise it will cause an error
+    #         task_embedding = nmmo_env.agent_task_map[agent_id][0].embedding
+    #         nmmo_env.obs[agent_id].gym_obs.reset(task_embedding)
 
-        # print(f"All agents are assigned: {nmmo_env.tasks[0].spec_name}\n")
+    #     print(f"All agents are assigned: {nmmo_env.tasks[0].spec_name}\n")
 
     # Generate the replay
     replay_helper.reset()
@@ -285,8 +287,6 @@ def generate_replay(args, env_creator, agent_creator, seed=None):
 
     # Save the replay file
     replay_file = f"{nmmo_env.game.name.lower()}_seed_{args.train.seed}_"
-    if args.task_to_assign is not None:
-        replay_file += f"task_{args.task_to_assign}_"
     replay_file = os.path.join(save_dir, replay_file + time.strftime("%Y%m%d_%H%M%S"))
     print(f"Saving replay to {replay_file}")
     replay_helper.save(replay_file, compress=True)
