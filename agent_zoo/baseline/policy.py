@@ -30,8 +30,9 @@ class Policy(pufferlib.models.Policy):
 
         # NOTE: Models with different task size will not be compatible with each other
         task_size = self.unflatten_context.flat_observation_space["DTask.V"].shape[0]
+        tile_attr_dim = self.unflatten_context.flat_observation_space["DTile.V"].shape[1]
 
-        self.tile_encoder = TileEncoder(layer_width)
+        self.tile_encoder = TileEncoder(layer_width, tile_attr_dim)
         self.player_encoder = PlayerEncoder(layer_width)
         self.task_encoder = TaskEncoder(task_size, layer_width)
         self.item_encoder = ItemEncoder(layer_width) if "ITEM" in self.enabled_systems else None
@@ -112,9 +113,11 @@ class ResnetBlock(torch.nn.Module):
 
 
 class TileEncoder(torch.nn.Module):
-    def __init__(self, output_size):
+    def __init__(self, output_size, tile_attr_dim):
         super().__init__()
-        self.type_embedding = torch.nn.Embedding(16, 62)
+        self.tile_attr_dim = tile_attr_dim
+        self.type_embedding = torch.nn.Embedding(16, 30)
+        self.entity_embedding = torch.nn.Embedding(8, 30)
 
         self.tile_resnet = ResnetBlock(64)
         self.tile_conv_1 = torch.nn.Conv2d(64, 32, 3)
@@ -126,7 +129,20 @@ class TileEncoder(torch.nn.Module):
     def forward(self, tile):
         tile_position = tile[:, :, :2] / 128 - 0.5
         tile_type = tile[:, :, 2].long().clip(0, 15)
-        tile = torch.cat((tile_position, self.type_embedding(tile_type)), dim=-1)
+        tile_cat = [tile_position, self.type_embedding(tile_type)]  # 32
+
+        # NOTE: forward() breaks if the tile_attr_dim is not 6
+        if self.tile_attr_dim > 3:
+            dist_map = tile[:, :, 3] / 128
+            entity_map = tile[:, :, 4].long().clip(0, 8)
+            rally_map = tile[:, :, 5]
+            tile_cat += [
+                dist_map.unsqueeze(-1),
+                self.entity_embedding(entity_map),
+                rally_map.unsqueeze(-1),
+            ]  # 32
+
+        tile = torch.cat(tile_cat, dim=-1)
         agents, _, features = tile.shape
         tile = tile.transpose(1, 2).view(agents, features, 15, 15).float()
 
@@ -167,15 +183,15 @@ class PlayerEncoder(torch.nn.Module):
 
         self.EntityId = EntityState.State.attr_name_to_col["id"]
         self.EntityAttackerId = EntityState.State.attr_name_to_col["attacker_id"]
-        self.EntityMessage = EntityState.State.attr_name_to_col["message"]
+        self.EntityMessage = EntityState.State.attr_name_to_col["message"]  # Communication token
         self.id_embedding = torch.nn.Embedding(512, 64)
         self.embedding_idx = [self.EntityId, self.EntityAttackerId]
         self.no_embedding_idx = [i for i in range(self.entity_dim)]
         self.no_embedding_idx.remove(self.EntityId)
         self.no_embedding_idx.remove(self.EntityAttackerId)
-        self.no_embedding_idx.remove(self.EntityMessage)
+        # self.no_embedding_idx.remove(self.EntityMessage)  # NOTE: now include teammates' comm tokens
 
-        self.agent_mlp = MLPBlock(64 + self.entity_dim - 3, output_size, output_size)
+        self.agent_mlp = MLPBlock(64 + self.entity_dim - 2, output_size, output_size)
         self.agent_fc = torch.nn.Linear(output_size, output_size)
         self.my_agent_fc = torch.nn.Linear(output_size, output_size)
         self.agent_norm = torch.nn.LayerNorm(output_size)
