@@ -96,7 +96,7 @@ reward_wrapper:
   eval_mode: False
   early_stop_agent_num: 0
   use_custom_reward: True
-  augment_obs: False
+  augment_obs: True
 
 baseline:
   reward_wrapper:

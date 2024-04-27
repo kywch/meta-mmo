@@ -18,7 +18,7 @@ class RewardWrapper(TeamWrapper):
         stat_prefix=None,
         use_custom_reward=True,
         # TeamWrapper args
-        augment_obs=False,
+        augment_obs=True,
         # Custom reward wrapper args
         game_lost_penalty=-1.0,
         game_won_reward=None,

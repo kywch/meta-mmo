@@ -33,7 +33,7 @@ class TeamWrapper(BaseStatWrapper):
     ):
         super().__init__(env, eval_mode, early_stop_agent_num, stat_prefix, use_custom_reward)
         self.config = env.config
-        self._augment_obs = True  # augment_obs
+        self._augment_obs = augment_obs
 
         # Team/agent, system states, task embedding
         self._task = {}

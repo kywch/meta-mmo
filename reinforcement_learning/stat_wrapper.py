@@ -246,8 +246,12 @@ KEY_EVENT = [
     "drink_water",
     "score_hit",
     "player_kill",
+    "fire_ammo",
     "consume_item",
+    "give_item",
+    "destroy_item",
     "harvest_item",
+    "give_gold",
     "list_item",
     "buy_item",
 ]
