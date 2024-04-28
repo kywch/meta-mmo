@@ -1,7 +1,6 @@
 import numpy as np
 import gymnasium as gym
 
-from nmmo.lib import material
 from nmmo.entity.entity import EntityState
 
 import reinforcement_learning.wrapper_helper as whp
@@ -9,8 +8,6 @@ from reinforcement_learning.stat_wrapper import BaseStatWrapper
 
 EntityAttr = EntityState.State.attr_name_to_col
 
-
-IMPASSIBLE = list(material.Impassible.indices)
 
 PASSIVE_REPR = 1  # matched to npc_type
 NEUTRAL_REPR = 2
@@ -49,15 +46,18 @@ class TeamWrapper(BaseStatWrapper):
         self._dummy_tile_obs = np.zeros(
             (self.config.MAP_N_OBS, self._extra_tile_obs), dtype=np.int16
         )
+        self._dummy_entity_obs = np.zeros(
+            (self.config.PLAYER_N_OBS, EntityState.State.num_attributes), dtype=np.int16
+        )
         self._obs_data = {
             agent_id: {
-                "entity_obs": None,  # placeholder
+                "entity_obs": self._dummy_entity_obs,
                 "entity_map": np.zeros(
                     (self.config.MAP_SIZE, self.config.MAP_SIZE), dtype=np.int16
                 ),
                 "rally_map": np.zeros((self.config.MAP_SIZE, self.config.MAP_SIZE), dtype=np.int16),
                 "rally_target": None,
-                "can_see_target": None,
+                "can_see_target": False,
                 "pass_to_whp": {
                     "my_team": set(),
                     "target_destroy": set(),
@@ -99,18 +99,6 @@ class TeamWrapper(BaseStatWrapper):
         """Called at the start of each episode"""
         obs, info = super().reset(**kwargs)
         obs = self._reset_team_vars(obs)
-
-        # # Set the task-related vars for obs augmentation
-        # if self._augment_obs:
-        #     self._rally_target = None
-        #     self._rally_map[:] = 0
-        #     if self._task[1] is not None:
-        #         task_name = self._task[1].name
-        #         # NOTE: Assume the mini games assign the same task for all agents
-        #         if "SeizeCenter" in task_name or "ProgressTowardCenter" in task_name:
-        #             self._rally_target = self.env.realm.map.center_coord
-        #             self._rally_map[self._rally_target] = 1
-
         return obs, info
 
     def _reset_team_vars(self, obs):
@@ -128,37 +116,37 @@ class TeamWrapper(BaseStatWrapper):
             ].embedding
 
             # Reset the _data
-            if self._augment_obs:
-                self._obs_data[agent_id]["rally_target"] = None
-                self._obs_data[agent_id]["rally_map"][:] = 0
-                if self._task[agent_id] is not None:
-                    self._obs_data[agent_id]["pass_to_whp"]["my_team"] = set(
-                        self._task[agent_id].assignee
+            self._obs_data[agent_id]["entity_obs"] = self._dummy_entity_obs
+            self._obs_data[agent_id]["entity_map"][:] = 0
+            self._obs_data[agent_id]["rally_map"][:] = 0
+            self._obs_data[agent_id]["rally_target"] = None
+            self._obs_data[agent_id]["can_see_target"] = False
+            self._obs_data[agent_id]["pass_to_whp"]["my_team"] = set(self._task[agent_id].assignee)
+
+            if (
+                "SeizeCenter" in self._task[agent_id].name
+                or "ProgressTowardCenter" in self._task[agent_id].name
+            ):
+                self._obs_data[agent_id]["rally_target"] = self.env.realm.map.center_coord
+                self._obs_data[agent_id]["rally_map"][self.env.realm.map.center_coord] = 1
+
+            # get target_protect, target_destroy from the task, for ProtectAgent and HeadHunting
+            self._obs_data[agent_id]["pass_to_whp"]["target_protect"] = set()
+            if "target_protect" in self._task[agent_id].kwargs:
+                target = self._task[agent_id].kwargs["target_protect"]
+                self._obs_data[agent_id]["pass_to_whp"]["target_protect"] = (
+                    set([target]) if isinstance(target, int) else set(target)
+                )
+
+            self._obs_data[agent_id]["pass_to_whp"]["target_destroy"] = set()
+            for key in ["target", "target_destroy"]:
+                if key in self._task[agent_id].kwargs:
+                    target = self._task[agent_id].kwargs[key]
+                    self._obs_data[agent_id]["pass_to_whp"]["target_destroy"] = (
+                        set([target]) if isinstance(target, int) else set(target)
                     )
 
-                    if (
-                        "SeizeCenter" in self._task[agent_id].name
-                        or "ProgressTowardCenter" in self._task[agent_id].name
-                    ):
-                        self._obs_data[agent_id]["rally_target"] = self.env.realm.map.center_coord
-                        self._obs_data[agent_id]["rally_map"][self.env.realm.map.center_coord] = 1
-
-                    # get target_protect, target_destroy from the task, for ProtectAgent and HeadHunting
-                    self._obs_data[agent_id]["pass_to_whp"]["target_protect"] = set()
-                    if "target_protect" in self._task[agent_id].kwargs:
-                        target = self._task[agent_id].kwargs["target_protect"]
-                        self._obs_data[agent_id]["pass_to_whp"]["target_protect"] = (
-                            set([target]) if isinstance(target, int) else set(target)
-                        )
-
-                    self._obs_data[agent_id]["pass_to_whp"]["target_destroy"] = set()
-                    for key in ["target", "target_destroy"]:
-                        if key in self._task[agent_id].kwargs:
-                            target = self._task[agent_id].kwargs[key]
-                            self._obs_data[agent_id]["pass_to_whp"]["target_destroy"] = (
-                                set([target]) if isinstance(target, int) else set(target)
-                            )
-
+            # Update the task obs
             obs[agent_id] = self.observation(agent_id, obs[agent_id])
         return obs
 
@@ -173,8 +161,8 @@ class TeamWrapper(BaseStatWrapper):
             agent_id, agent_obs
         )
 
+        self._obs_data[agent_id]["entity_obs"] = agent_obs["Entity"]
         if self._augment_obs:
-            self._obs_data[agent_id]["entity_obs"] = agent_obs["Entity"]
             whp.update_entity_map(
                 self._obs_data[agent_id]["entity_map"],
                 agent_obs["Entity"],

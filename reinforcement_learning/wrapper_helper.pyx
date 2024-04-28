@@ -30,8 +30,10 @@ def update_entity_map(short [:, :] entity_map,
             else:
                 entity_map[row, col] = max(const_dict["ENEMY_REPR"], entity_map[row, col])
                 num_enemy += 1
+
             if entity_obs[idx, id_col] in const_dict["target_destroy"]:
                 entity_map[row, col] = max(const_dict["DESTROY_TARGET_REPR"], entity_map[row, col])
+
             if entity_obs[idx, id_col] in const_dict["target_protect"]:
                 entity_map[row, col] = max(const_dict["PROTECT_TARGET_REPR"], entity_map[row, col])
 
@@ -48,13 +50,16 @@ def compute_comm_action(bint can_see_target,
     cdef short id_col = entity_attr["id"]
 
     my_health = (my_health // 34) + 1  # 1 - 3
+
     for idx in range(entity_obs.shape[0]):
         if entity_obs[idx, id_col] == 0:
             continue
+
         if entity_obs[idx, id_col] < 0:
             peri_npc += 1
+
         if entity_obs[idx, id_col] > 0 and \
-           entity_obs[idx, id_col] in const_dict["my_team"]:
+           entity_obs[idx, id_col] not in const_dict["my_team"]:
             peri_enemy += 1
 
     peri_enemy = min((peri_enemy+3)//4, 3)  # 0: no enemy, 1: 1-4, 2: 5-8, 3: 9+
