@@ -137,6 +137,12 @@ def make_env_creator(
         ]
     elif train_flag == "tb_only":
         game_packs = [(TeamBattle, 1)]
+    elif train_flag == "rc_only":
+        game_packs = [(RacetoCenter, 1)]
+    elif train_flag == "kh_only":
+        game_packs = [(EasyKingoftheHill, 1)]
+    elif train_flag == "sw_only":
+        game_packs = [(Sandwich, 1)]
     else:
         raise ValueError(f"Invalid train_flag: {train_flag}")
 
