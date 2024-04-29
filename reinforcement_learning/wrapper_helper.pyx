@@ -1,6 +1,6 @@
-#cython: boundscheck=False
-#cython: wraparound=False
-#cython: nonecheck=False
+#cython: boundscheck=True
+#cython: wraparound=True
+#cython: nonecheck=True
 
 def update_entity_map(short [:, :] entity_map,
                       short [:, :] entity_obs,
