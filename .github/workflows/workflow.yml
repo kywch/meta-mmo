@@ -7,7 +7,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        py: ["3.8", "3.9", "3.10"]
+        py: ["3.9", "3.10"]
     steps:
       - name: Setup python for test ${{ matrix.py }}
         uses: actions/setup-python@v5
