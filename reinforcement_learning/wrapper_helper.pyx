@@ -3,7 +3,7 @@
 #cython: nonecheck=False
 
 def update_entity_map(short [:, :] entity_map,
-                      short [:, ::1] entity_obs,
+                      short [:, :] entity_obs,
                       dict entity_attr,
                       dict const_dict):
     cdef short idx, row, col
@@ -41,7 +41,7 @@ def update_entity_map(short [:, :] entity_map,
 
 def compute_comm_action(bint can_see_target,
                         short my_health,
-                        short [:, ::1] entity_obs,
+                        short [:, :] entity_obs,
                         dict entity_attr,
                         dict const_dict):
     cdef short idx
