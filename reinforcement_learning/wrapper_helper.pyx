@@ -66,3 +66,24 @@ def compute_comm_action(bint can_see_target,
     peri_npc = min((peri_npc+3)//4, 3)  # 0: no npc, 1: 1-4, 2: 5-8, 3: 9+
 
     return (can_see_target << 5) + (peri_enemy << 4) + (peri_npc << 2) + my_health
+
+def compute_comm_entity(short[:] entities,
+                        set my_team):
+    cdef short idx
+    cdef short peri_enemy = 0
+    cdef short peri_npc = 0
+
+    for idx in range(len(entities)):
+        if entities[idx] == 0:
+            continue
+
+        if entities[idx] < 0:
+            peri_npc += 1
+
+        if entities[idx] > 0 and entities[idx] not in my_team:
+            peri_enemy += 1
+
+    peri_enemy = min((peri_enemy+3)//4, 3)  # 0: no enemy, 1: 1-4, 2: 5-8, 3: 9+
+    peri_npc = min((peri_npc+3)//4, 3)  # 0: no npc, 1: 1-4, 2: 5-8, 3: 9+
+
+    return (peri_enemy << 4) + (peri_npc << 2)

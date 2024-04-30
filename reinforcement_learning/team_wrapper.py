@@ -267,25 +267,28 @@ class TeamWrapper(BaseStatWrapper):
         my_health = (agent.resources.health.val // 34) + 1  # 0-100 -> 1-3
 
         entity_obs = self._obs_data[agent_id]["entity_obs"]
+        entities = entity_obs[:, EntityAttr["id"]]
+        entities = entities[entities != 0]
 
-        peri_npc = min(
-            (((entity_obs[:, EntityAttr["id"]] < 0).sum() + 3) // 4), 3
-        )  # 0: no npc, 1: 1-4, 2: 5-8, 3: 9+
-
-        players = entity_obs[:, EntityAttr["id"]] > 0
-        num_enemy = sum(
-            1
-            for e_id in entity_obs[players, EntityAttr["id"]]
-            if e_id not in self._obs_data[agent_id]["pass_to_whp"]["my_team"]
+        peri_comm = whp.compute_comm_entity(
+            entities, self._obs_data[agent_id]["pass_to_whp"]["my_team"]
         )
-        peri_enemy = min((num_enemy + 3) // 4, 3)  # 0: no enemy, 1: 1-4, 2: 5-8, 3: 9+
 
-        return (
-            (self._obs_data[agent_id]["can_see_target"] << 5)
-            + (peri_enemy << 4)
-            + (peri_npc << 2)
-            + my_health
-        )
+        # peri_npc = min(
+        #     (((entity_obs[:, EntityAttr["id"]] < 0).sum() + 3) // 4), 3
+        # ) # 0: no npc, 1: 1-4, 2: 5-8, 3: 9+
+        # peri_npc = peri_npc << 2
+
+        # players = entity_obs[:, EntityAttr["id"]] > 0
+        # num_enemy = sum(
+        #     1
+        #     for e_id in entity_obs[players, EntityAttr["id"]]
+        #     if e_id not in self._obs_data[agent_id]["pass_to_whp"]["my_team"]
+        # )
+        # peri_enemy = min((num_enemy + 3) // 4, 3)  # 0: no enemy, 1: 1-4, 2: 5-8, 3: 9+
+        # peri_enemy = peri_enemy << 4
+
+        return (self._obs_data[agent_id]["can_see_target"] << 5) + peri_comm + my_health
 
         # return whp.compute_comm_action(
         #     self._obs_data[agent_id]["can_see_target"],
