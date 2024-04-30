@@ -65,4 +65,4 @@ def compute_comm_action(bint can_see_target,
     peri_enemy = min((peri_enemy+3)//4, 3)  # 0: no enemy, 1: 1-4, 2: 5-8, 3: 9+
     peri_npc = min((peri_npc+3)//4, 3)  # 0: no npc, 1: 1-4, 2: 5-8, 3: 9+
 
-    return can_see_target << 5 | peri_enemy << 4 | peri_npc << 2 | my_health
+    return (can_see_target << 5) + (peri_enemy << 4) + (peri_npc << 2) + my_health
