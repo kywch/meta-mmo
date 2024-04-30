@@ -21,6 +21,11 @@ def get_team_dict(num_agents, num_agents_per_team):
 
 
 class TeamBattle(ng.TeamBattle):
+    _next_num_npc = None
+
+    def set_num_npc(self, num_npc):
+        self._next_num_npc = num_npc
+
     def _set_config(self):
         self.config.reset()
         self.config.set_for_episode("MAP_RESET_FROM_FRACTAL", True)
@@ -29,6 +34,9 @@ class TeamBattle(ng.TeamBattle):
         self.config.set_for_episode("TERRAIN_SCATTER_EXTRA_RESOURCES", True)
         self.config.set_for_episode("DEATH_FOG_SPEED", 1 / 6)
         self.config.set_for_episode("DEATH_FOG_FINAL_SIZE", 8)
+
+        if self._next_num_npc is not None:
+            self.config.set_for_episode("NPC_N", self._next_num_npc)
 
 
 class RacetoCenter(minigames.RacetoCenter):

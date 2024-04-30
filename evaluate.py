@@ -242,6 +242,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--save-file-prefix", type=str, default=None, help="Prefix for the save file"
     )
+    parser.add_argument("--use-mini", action="store_true", help="Use mini game config")
     parser.add_argument("--debug", action="store_true", help="Debug mode")
     args = parser.parse_args()
 
@@ -252,7 +253,7 @@ if __name__ == "__main__":
     else:
         raise ValueError(f"Invalid game: {args.game}")
 
-    runner = EvalRunner(args.policy_store_dir, debug=args.debug)
+    runner = EvalRunner(args.policy_store_dir, use_mini=args.use_mini, debug=args.debug)
 
     for game in game_list:
         for i in range(args.repeat):

@@ -101,6 +101,7 @@ def make_game_creator(game, num_policies, sample_env):
 
         def game_creator(env):
             game = environment.TeamBattle(env)
+            game.set_num_npc(128)
             return game
 
     elif game == "race":  # Individual game
@@ -115,7 +116,7 @@ def make_game_creator(game, num_policies, sample_env):
 
         def game_creator(env):
             game = environment.EasyKingoftheHill(env)
-            game.set_seize_duration(30)
+            game.set_seize_duration(100)
             return game
 
     elif game == "sandwich":
@@ -123,7 +124,7 @@ def make_game_creator(game, num_policies, sample_env):
         def game_creator(env):
             game = environment.Sandwich(env)
             game.set_grass_map(True)
-            game.set_inner_npc_num(8)
+            game.set_inner_npc_num(10)
             return game
 
     elif game == "radio":
