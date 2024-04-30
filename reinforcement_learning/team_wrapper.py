@@ -4,7 +4,7 @@ import gymnasium as gym
 from nmmo.entity.entity import EntityState
 
 # TODO: validate the correctness and stability of the cython module
-import reinforcement_learning.wrapper_helper as whp
+# import reinforcement_learning.wrapper_helper as whp
 from reinforcement_learning.stat_wrapper import BaseStatWrapper
 
 EntityAttr = EntityState.State.attr_name_to_col
@@ -164,13 +164,13 @@ class TeamWrapper(BaseStatWrapper):
 
         self._obs_data[agent_id]["entity_obs"] = agent_obs["Entity"]
         if self._augment_obs:
-            # self._update_entity_map(agent_id, agent_obs["Entity"])
-            whp.update_entity_map(
-                self._obs_data[agent_id]["entity_map"],
-                agent_obs["Entity"],
-                EntityAttr,
-                self._obs_data[agent_id]["pass_to_whp"],
-            )
+            self._update_entity_map(agent_id, agent_obs)
+            # whp.update_entity_map(
+            #     self._obs_data[agent_id]["entity_map"],
+            #     agent_obs["Entity"],
+            #     EntityAttr,
+            #     self._obs_data[agent_id]["pass_to_whp"],
+            # )
 
         agent_obs["Tile"] = self._augment_tile_obs(agent_id, agent_obs)
 
@@ -231,16 +231,19 @@ class TeamWrapper(BaseStatWrapper):
     # NOTE: These functions were ported to cython, but those seem unstable.
 
     def _update_entity_map(self, agent_id, agent_obs):
-        entities = agent_obs[:, EntityAttr["id"]]
-        coord = agent_obs[:, [EntityAttr["row"], EntityAttr["col"]]]
+        tile_obs = agent_obs["Tile"]
+        entities = agent_obs["Entity"][:, EntityAttr["id"]]
+        coord = agent_obs["Entity"][:, [EntityAttr["row"], EntityAttr["col"]]]
         entity_map = self._obs_data[agent_id]["entity_map"]
 
-        entity_map[:] = 0
+        # Clear only the used parts
+        # NOTE: We may want to add more info to entity map, based on comm
+        entity_map[tile_obs[:, 0], tile_obs[:, 1]] = 0
 
         # Update (overwrite) the entity map in the below order
         # NPCs: passive -> neutral -> hostile
         for npc_type in range(1, 4):
-            npc_coord = coord[agent_obs[:, EntityAttr["npc_type"]] == npc_type]
+            npc_coord = coord[agent_obs["Entity"][:, EntityAttr["npc_type"]] == npc_type]
             self._obs_data[agent_id]["entity_map"][npc_coord] = npc_type
 
         # Players: my team -> enemies -> destroy target -> protect target
@@ -270,25 +273,25 @@ class TeamWrapper(BaseStatWrapper):
         entities = entity_obs[:, EntityAttr["id"]]
         entities = entities[entities != 0]
 
-        peri_comm = whp.compute_comm_entity(
-            entities, self._obs_data[agent_id]["pass_to_whp"]["my_team"]
-        )
-
-        # peri_npc = min(
-        #     (((entity_obs[:, EntityAttr["id"]] < 0).sum() + 3) // 4), 3
-        # ) # 0: no npc, 1: 1-4, 2: 5-8, 3: 9+
-        # peri_npc = peri_npc << 2
-
-        # players = entity_obs[:, EntityAttr["id"]] > 0
-        # num_enemy = sum(
-        #     1
-        #     for e_id in entity_obs[players, EntityAttr["id"]]
-        #     if e_id not in self._obs_data[agent_id]["pass_to_whp"]["my_team"]
+        # peri_comm = whp.compute_comm_entity(
+        #     entities, self._obs_data[agent_id]["pass_to_whp"]["my_team"]
         # )
-        # peri_enemy = min((num_enemy + 3) // 4, 3)  # 0: no enemy, 1: 1-4, 2: 5-8, 3: 9+
-        # peri_enemy = peri_enemy << 4
 
-        return (self._obs_data[agent_id]["can_see_target"] << 5) + peri_comm + my_health
+        peri_npc = min(
+            (((entity_obs[:, EntityAttr["id"]] < 0).sum() + 3) // 4), 3
+        )  # 0: no npc, 1: 1-4, 2: 5-8, 3: 9+
+        peri_npc = peri_npc << 2
+
+        players = entity_obs[:, EntityAttr["id"]] > 0
+        num_enemy = sum(
+            1
+            for e_id in entity_obs[players, EntityAttr["id"]]
+            if e_id not in self._obs_data[agent_id]["pass_to_whp"]["my_team"]
+        )
+        peri_enemy = min((num_enemy + 3) // 4, 3)  # 0: no enemy, 1: 1-4, 2: 5-8, 3: 9+
+        peri_enemy = peri_enemy << 4
+
+        return (self._obs_data[agent_id]["can_see_target"] << 5) + peri_npc + peri_enemy + my_health
 
         # return whp.compute_comm_action(
         #     self._obs_data[agent_id]["can_see_target"],
