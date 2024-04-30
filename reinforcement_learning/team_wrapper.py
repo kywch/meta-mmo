@@ -4,7 +4,7 @@ import gymnasium as gym
 from nmmo.entity.entity import EntityState
 
 # TODO: validate the correctness and stability of the cython module
-# import reinforcement_learning.wrapper_helper as whp
+import reinforcement_learning.wrapper_helper as whp
 from reinforcement_learning.stat_wrapper import BaseStatWrapper
 
 EntityAttr = EntityState.State.attr_name_to_col
@@ -164,13 +164,13 @@ class TeamWrapper(BaseStatWrapper):
 
         self._obs_data[agent_id]["entity_obs"] = agent_obs["Entity"]
         if self._augment_obs:
-            self._update_entity_map(agent_id, agent_obs["Entity"])
-            # whp.update_entity_map(
-            #     self._obs_data[agent_id]["entity_map"],
-            #     agent_obs["Entity"],
-            #     EntityAttr,
-            #     self._obs_data[agent_id]["pass_to_whp"],
-            # )
+            # self._update_entity_map(agent_id, agent_obs["Entity"])
+            whp.update_entity_map(
+                self._obs_data[agent_id]["entity_map"],
+                agent_obs["Entity"],
+                EntityAttr,
+                self._obs_data[agent_id]["pass_to_whp"],
+            )
 
         agent_obs["Tile"] = self._augment_tile_obs(agent_id, agent_obs)
 
