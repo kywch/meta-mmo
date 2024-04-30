@@ -3,7 +3,8 @@ import gymnasium as gym
 
 from nmmo.entity.entity import EntityState
 
-import reinforcement_learning.wrapper_helper as whp
+# TODO: validate the correctness and stability of the cython module
+# import reinforcement_learning.wrapper_helper as whp
 from reinforcement_learning.stat_wrapper import BaseStatWrapper
 
 EntityAttr = EntityState.State.attr_name_to_col
@@ -163,12 +164,13 @@ class TeamWrapper(BaseStatWrapper):
 
         self._obs_data[agent_id]["entity_obs"] = agent_obs["Entity"]
         if self._augment_obs:
-            whp.update_entity_map(
-                self._obs_data[agent_id]["entity_map"],
-                agent_obs["Entity"],
-                EntityAttr,
-                self._obs_data[agent_id]["pass_to_whp"],
-            )
+            self._update_entity_map(agent_id, agent_obs["Entity"])
+            # whp.update_entity_map(
+            #     self._obs_data[agent_id]["entity_map"],
+            #     agent_obs["Entity"],
+            #     EntityAttr,
+            #     self._obs_data[agent_id]["pass_to_whp"],
+            # )
 
         agent_obs["Tile"] = self._augment_tile_obs(agent_id, agent_obs)
 
@@ -226,16 +228,69 @@ class TeamWrapper(BaseStatWrapper):
         agent_atn["Comm"]["Token"] = self._compute_comm_action(agent_id)
         return agent_atn
 
+    # NOTE: These functions were ported to cython, but those seem unstable.
+
+    def _update_entity_map(self, agent_id, agent_obs):
+        entities = agent_obs[:, EntityAttr["id"]]
+        coord = agent_obs[:, [EntityAttr["row"], EntityAttr["col"]]]
+        entity_map = self._obs_data[agent_id]["entity_map"]
+
+        entity_map[:] = 0
+
+        # Update (overwrite) the entity map in the below order
+        # NPCs: passive -> neutral -> hostile
+        for npc_type in range(1, 4):
+            npc_coord = coord[agent_obs[:, EntityAttr["npc_type"]] == npc_type]
+            self._obs_data[agent_id]["entity_map"][npc_coord] = npc_type
+
+        # Players: my team -> enemies -> destroy target -> protect target
+        my_team = np.in1d(entities, self._obs_data[agent_id]["pass_to_whp"]["my_team"])
+        entity_map[coord[my_team]] = TEAMMATE_REPR
+        entity_map[coord[my_team == False & (entities > 0)]] = ENEMY_REPR
+
+        destroy_target = np.in1d(
+            entities, self._obs_data[agent_id]["pass_to_whp"]["target_destroy"]
+        )
+        entity_map[coord[destroy_target]] = DESTROY_TARGET_REPR
+
+        protect_target = np.in1d(
+            entities, self._obs_data[agent_id]["pass_to_whp"]["target_protect"]
+        )
+        entity_map[coord[protect_target]] = PROTECT_TARGET_REPR
+
     def _compute_comm_action(self, agent_id):
         # comm action values range from 0 - 127, 0: dummy obs
         if agent_id not in self.env.realm.players:
             return 0
 
         agent = self.env.realm.players[agent_id]
-        return whp.compute_comm_action(
-            self._obs_data[agent_id]["can_see_target"],
-            agent.resources.health.val,
-            self._obs_data[agent_id]["entity_obs"],
-            EntityAttr,
-            self._obs_data[agent_id]["pass_to_whp"],
+        my_health = (agent.resources.health.val // 34) + 1  # 0-100 -> 1-3
+
+        entity_obs = self._obs_data[agent_id]["entity_obs"]
+
+        peri_npc = min(
+            (((entity_obs[:, EntityAttr["id"]] < 0).sum() + 3) // 4), 3
+        )  # 0: no npc, 1: 1-4, 2: 5-8, 3: 9+
+
+        players = entity_obs[:, EntityAttr["id"]] > 0
+        num_enemy = sum(
+            1
+            for e_id in entity_obs[players, EntityAttr["id"]]
+            if e_id not in self._obs_data[agent_id]["pass_to_whp"]["my_team"]
         )
+        peri_enemy = min((num_enemy + 3) // 4, 3)  # 0: no enemy, 1: 1-4, 2: 5-8, 3: 9+
+
+        return (
+            (self._obs_data[agent_id]["can_see_target"] << 5)
+            + (peri_enemy << 4)
+            + (peri_npc << 2)
+            + my_health
+        )
+
+        # return whp.compute_comm_action(
+        #     self._obs_data[agent_id]["can_see_target"],
+        #     agent.resources.health.val,
+        #     self._obs_data[agent_id]["entity_obs"],
+        #     EntityAttr,
+        #     self._obs_data[agent_id]["pass_to_whp"],
+        # )

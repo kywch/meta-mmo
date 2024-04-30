@@ -303,7 +303,6 @@ def evaluate(data):
             r = torch.as_tensor(r).float().to(data.device).view(-1)
             d = torch.as_tensor(d).float().to(data.device).view(-1)
 
-            agent_steps_collected += sum(mask)
             padded_steps_collected += len(mask)
 
             # Multiple policies will not work with new envpool
@@ -331,6 +330,9 @@ def evaluate(data):
             # Index alive mask with policy pool idxs...
             # TODO: Find a way to avoid having to do this
             learner_mask = torch.Tensor(mask * data.policy_pool.mask)
+
+            # NOTE: sum(learner_mask) is actually used for training
+            agent_steps_collected += sum(learner_mask)
 
             # Ensure indices do not exceed batch size
             indices = torch.where(learner_mask)[0][: config.batch_size - ptr + 1].numpy()
