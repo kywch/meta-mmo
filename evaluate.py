@@ -135,7 +135,7 @@ class EvalRunner:
         return clean_pufferl.create(
             config=config,
             agent_creator=make_agent_creator(),
-            env_creator=make_env_creator(game),
+            env_creator=env_creator,
             vectorization=vectorization,
             eval_mode=True,
             eval_model_path=self.policy_store_dir,
