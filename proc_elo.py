@@ -28,15 +28,12 @@ def calculate_elo(game_results, anchor_elo=1000):
 
 
 def process_eval_files(results_dir, file_prefix):
+    game_results = []
     for file in os.listdir(results_dir):
         # NOTE: assumes the file naming convention is '<file_prefix>_<seed>.json'
         if not file.startswith(file_prefix) or not file.endswith(".json"):
             continue
 
-        # game = file.split("_")[0]
-        # random_seed = file.split("_")[1].replace(".json", "")
-
-        game_results = []
         with open(os.path.join(results_dir, file), "r") as f:
             # NOTE: Assuming that the data is a list of dictionaries
             game_results += json.load(f)

@@ -8,6 +8,12 @@ import nmmo
 import nmmo.core.config as nc
 import nmmo.core.game_api as ng
 from nmmo import minigames
+from nmmo.task.task_spec import TaskSpec, make_task_from_spec
+
+
+# Goal function for AmmoTraining
+def UseAnyAmmo(gs, subject, quantity: int):
+    return min(subject.event.FIRE_AMMO.type.shape[0] / quantity, 1)
 
 
 def get_team_dict(num_agents, num_agents_per_team):
@@ -37,6 +43,16 @@ class TeamBattle(ng.TeamBattle):
 
         if self._next_num_npc is not None:
             self.config.set_for_episode("NPC_N", self._next_num_npc)
+
+
+class AmmoTraining(ng.AgentTraining):
+    def is_compatible(self):
+        return self.config.are_systems_enabled(["COMBAT", "EQUIPMENT", "PROFESSION"])
+
+    def _define_tasks(self):
+        ammo_tasks = [TaskSpec(eval_fn=UseAnyAmmo, eval_fn_kwargs={"quantity": 10})]
+        ammo_tasks *= self.config.PLAYER_N
+        return make_task_from_spec(self.config.POSSIBLE_AGENTS, ammo_tasks)
 
 
 class RacetoCenter(minigames.RacetoCenter):
@@ -151,6 +167,8 @@ def make_env_creator(
         game_packs = [(EasyKingoftheHill, 1)]
     elif train_flag == "sw_only":
         game_packs = [(Sandwich, 1)]
+    elif train_flag == "tb_ammo":
+        game_packs = [(TeamBattle, 5), (AmmoTraining, 1)]
     else:
         raise ValueError(f"Invalid train_flag: {train_flag}")
 

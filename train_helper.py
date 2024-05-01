@@ -112,6 +112,12 @@ def make_game_creator(game, num_policies, sample_env):
             game.set_map_size(128)
             return game
 
+    elif game == "ammo":  # Individual game
+        kernel = pp.create_kernel(num_agents, num_policies)
+
+        def game_creator(env):
+            return environment.AmmoTraining(env)
+
     elif game == "koh":
 
         def game_creator(env):
