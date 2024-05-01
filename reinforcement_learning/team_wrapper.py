@@ -18,6 +18,10 @@ DESTROY_TARGET_REPR = 5
 TEAMMATE_REPR = 6
 PROTECT_TARGET_REPR = 7
 
+TARGET_NOT_SEIZED = 1
+TARGET_SEIZED_BY_US = 2
+TARGET_SEIZED_BY_OTHER = 3
+
 
 class TeamWrapper(BaseStatWrapper):
     def __init__(
@@ -60,9 +64,9 @@ class TeamWrapper(BaseStatWrapper):
                 "rally_target": None,
                 "can_see_target": False,
                 "pass_to_whp": {
-                    "my_team": set(),
-                    "target_destroy": set(),
-                    "target_protect": set(),
+                    "my_team": tuple(),
+                    "target_destroy": tuple(),
+                    "target_protect": tuple(),
                     "ENEMY_REPR": ENEMY_REPR,
                     "DESTROY_TARGET_REPR": TEAMMATE_REPR,
                     "TEAMMATE_REPR": TEAMMATE_REPR,
@@ -129,7 +133,9 @@ class TeamWrapper(BaseStatWrapper):
                 or "ProgressTowardCenter" in self._task[agent_id].name
             ):
                 self._obs_data[agent_id]["rally_target"] = self.env.realm.map.center_coord
-                self._obs_data[agent_id]["rally_map"][self.env.realm.map.center_coord] = 1
+                self._obs_data[agent_id]["rally_map"][self.env.realm.map.center_coord] = (
+                    TARGET_NOT_SEIZED
+                )
 
             # get target_protect, target_destroy from the task, for ProtectAgent and HeadHunting
             self._obs_data[agent_id]["pass_to_whp"]["target_protect"] = tuple()
@@ -202,7 +208,13 @@ class TeamWrapper(BaseStatWrapper):
             # Entity map should be updated
             entity = self._obs_data[agent_id]["entity_map"][tile_obs[:, 0], tile_obs[:, 1]]
 
-            # All zero if no rally point
+            # Process seize target
+            target = self._obs_data[agent_id]["rally_target"]
+            if target and target in self.env.game_state.seize_status:
+                if self.env.game_state.seize_status[target][0] in self._task[agent_id].assignee:
+                    self._obs_data[agent_id]["rally_map"][target] = TARGET_SEIZED_BY_US
+                else:
+                    self._obs_data[agent_id]["rally_map"][target] = TARGET_SEIZED_BY_OTHER
             rally_point = self._obs_data[agent_id]["rally_map"][tile_obs[:, 0], tile_obs[:, 1]]
 
             # To communicate if the agent can see the target

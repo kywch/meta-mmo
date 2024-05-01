@@ -208,11 +208,13 @@ def generate_replay(args, env_creator, agent_creator, seed=None):
 
     # Add the policy names to agent names
     if len(policies) > 1:
+        agent_policy_map = {}
         for policy_id, samp in data.policy_pool.sample_idxs.items():
             policy_name = data.policy_pool.current_policies[policy_id]["name"].replace("_", "-")
             for idx in samp:
                 agent_id = idx + 1  # agents are 0-indexed in policy_pool, but 1-indexed in nmmo
                 nmmo_env.realm.players[agent_id].name += f"-({policy_name})"
+                agent_policy_map[agent_id] = policy_name
 
     # NOTE: Disable for now
     # Assign the specified task to the agents, if provided
@@ -274,6 +276,11 @@ def generate_replay(args, env_creator, agent_creator, seed=None):
         if nmmo_env.game.is_over:
             if nmmo_env.game.winners is not None:
                 print("Winners:", nmmo_env.game.winners)
+                if len(policies) > 1:
+                    winner_policy = np.unique(
+                        [agent_policy_map[agent_id] for agent_id in nmmo_env.game.winners]
+                    )
+                    print("Winning policies:", winner_policy)
             else:
                 print("No winners.")
             break

@@ -61,6 +61,10 @@ class RacetoCenter(minigames.RacetoCenter):
 
 
 class EasyKingoftheHill(minigames.KingoftheHill):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.map_size = 60
+
     def _set_config(self):
         super()._set_config()
         # make the game easier by decreasing the resource demands/penalty
