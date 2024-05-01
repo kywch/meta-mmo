@@ -122,7 +122,7 @@ class TeamWrapper(BaseStatWrapper):
             self._obs_data[agent_id]["rally_map"][:] = 0
             self._obs_data[agent_id]["rally_target"] = None
             self._obs_data[agent_id]["can_see_target"] = False
-            self._obs_data[agent_id]["pass_to_whp"]["my_team"] = set(self._task[agent_id].assignee)
+            self._obs_data[agent_id]["pass_to_whp"]["my_team"] = self._task[agent_id].assignee
 
             if (
                 "SeizeCenter" in self._task[agent_id].name
@@ -132,19 +132,19 @@ class TeamWrapper(BaseStatWrapper):
                 self._obs_data[agent_id]["rally_map"][self.env.realm.map.center_coord] = 1
 
             # get target_protect, target_destroy from the task, for ProtectAgent and HeadHunting
-            self._obs_data[agent_id]["pass_to_whp"]["target_protect"] = set()
+            self._obs_data[agent_id]["pass_to_whp"]["target_protect"] = tuple()
             if "target_protect" in self._task[agent_id].kwargs:
                 target = self._task[agent_id].kwargs["target_protect"]
                 self._obs_data[agent_id]["pass_to_whp"]["target_protect"] = (
-                    set([target]) if isinstance(target, int) else set(target)
+                    (target,) if isinstance(target, int) else tuple(target)
                 )
 
-            self._obs_data[agent_id]["pass_to_whp"]["target_destroy"] = set()
+            self._obs_data[agent_id]["pass_to_whp"]["target_destroy"] = tuple()
             for key in ["target", "target_destroy"]:
                 if key in self._task[agent_id].kwargs:
                     target = self._task[agent_id].kwargs[key]
                     self._obs_data[agent_id]["pass_to_whp"]["target_destroy"] = (
-                        set([target]) if isinstance(target, int) else set(target)
+                        (target,) if isinstance(target, int) else tuple(target)
                     )
 
             # Update the task obs
@@ -232,8 +232,10 @@ class TeamWrapper(BaseStatWrapper):
 
     def _update_entity_map(self, agent_id, agent_obs):
         tile_obs = agent_obs["Tile"]
-        entities = agent_obs["Entity"][:, EntityAttr["id"]]
-        coord = agent_obs["Entity"][:, [EntityAttr["row"], EntityAttr["col"]]]
+        not_empty = agent_obs["Entity"][:, EntityAttr["id"]] != 0
+        entities = agent_obs["Entity"][not_empty, EntityAttr["id"]]
+        ent_rows = agent_obs["Entity"][not_empty, EntityAttr["row"]]
+        ent_cols = agent_obs["Entity"][not_empty, EntityAttr["col"]]
         entity_map = self._obs_data[agent_id]["entity_map"]
 
         # Clear only the used parts
@@ -243,23 +245,28 @@ class TeamWrapper(BaseStatWrapper):
         # Update (overwrite) the entity map in the below order
         # NPCs: passive -> neutral -> hostile
         for npc_type in range(1, 4):
-            npc_coord = coord[agent_obs["Entity"][:, EntityAttr["npc_type"]] == npc_type]
-            self._obs_data[agent_id]["entity_map"][npc_coord] = npc_type
+            npc_idx = agent_obs["Entity"][not_empty, EntityAttr["npc_type"]] == npc_type
+            entity_map[ent_rows[npc_idx], ent_cols[npc_idx]] = npc_type
 
         # Players: my team -> enemies -> destroy target -> protect target
-        my_team = np.in1d(entities, self._obs_data[agent_id]["pass_to_whp"]["my_team"])
-        entity_map[coord[my_team]] = TEAMMATE_REPR
-        entity_map[coord[my_team == False & (entities > 0)]] = ENEMY_REPR
+        if agent_id not in self._task:
+            my_team = entities == agent_id
+        else:
+            my_team = np.in1d(entities, self._task[agent_id].assignee)
+        entity_map[ent_rows[my_team], ent_cols[my_team]] = TEAMMATE_REPR
+        entity_map[
+            ent_rows[my_team == False & (entities > 0)], ent_cols[my_team == False & (entities > 0)]
+        ] = ENEMY_REPR
 
         destroy_target = np.in1d(
             entities, self._obs_data[agent_id]["pass_to_whp"]["target_destroy"]
         )
-        entity_map[coord[destroy_target]] = DESTROY_TARGET_REPR
+        entity_map[ent_rows[destroy_target], ent_cols[destroy_target]] = DESTROY_TARGET_REPR
 
         protect_target = np.in1d(
             entities, self._obs_data[agent_id]["pass_to_whp"]["target_protect"]
         )
-        entity_map[coord[protect_target]] = PROTECT_TARGET_REPR
+        entity_map[ent_rows[protect_target], ent_cols[protect_target]] = PROTECT_TARGET_REPR
 
     def _compute_comm_action(self, agent_id):
         # comm action values range from 0 - 127, 0: dummy obs

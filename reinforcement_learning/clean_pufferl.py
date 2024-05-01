@@ -332,7 +332,7 @@ def evaluate(data):
             learner_mask = torch.Tensor(mask * data.policy_pool.mask)
 
             # NOTE: sum(learner_mask) is actually used for training
-            agent_steps_collected += sum(learner_mask)
+            agent_steps_collected += learner_mask.sum()
 
             # Ensure indices do not exceed batch size
             indices = torch.where(learner_mask)[0][: config.batch_size - ptr + 1].numpy()
