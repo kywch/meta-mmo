@@ -210,8 +210,8 @@ class TeamWrapper(BaseStatWrapper):
 
             # Process seize target
             target = self._obs_data[agent_id]["rally_target"]
-            if target and target in self.env.game_state.seize_status:
-                if self.env.game_state.seize_status[target][0] in self._task[agent_id].assignee:
+            if target and target in self.env.realm.map.seize_status:
+                if self.env.realm.map.seize_status[target][0] in self._task[agent_id].assignee:
                     self._obs_data[agent_id]["rally_map"][target] = TARGET_SEIZED_BY_US
                 else:
                     self._obs_data[agent_id]["rally_map"][target] = TARGET_SEIZED_BY_OTHER
