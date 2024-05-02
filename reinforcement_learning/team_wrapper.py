@@ -93,7 +93,7 @@ class TeamWrapper(BaseStatWrapper):
         )
 
         # NOTE: To see the effect of obs augmentation, make the obs space the same
-        tile_dim = self._extra_tile_obs + 3  # 3 for the original tile obs
+        tile_dim = self._extra_tile_obs + 4  # 4 for the original tile obs
         obs_space["Tile"] = gym.spaces.Box(
             low=-(2**15), high=2**15 - 1, dtype=np.int16, shape=(self.config.MAP_N_OBS, tile_dim)
         )
@@ -200,7 +200,7 @@ class TeamWrapper(BaseStatWrapper):
         return whole_mask
 
     def _augment_tile_obs(self, agent_id, agent_obs):
-        tile_obs = agent_obs["Tile"][:, :3]
+        tile_obs = agent_obs["Tile"][:, :4]
 
         if self._augment_obs:
             dist = self._dist_map[tile_obs[:, 0], tile_obs[:, 1]]

@@ -41,8 +41,12 @@ class TeamBattle(ng.TeamBattle):
         self.config.set_for_episode("DEATH_FOG_SPEED", 1 / 6)
         self.config.set_for_episode("DEATH_FOG_FINAL_SIZE", 8)
 
-        if self._next_num_npc is not None:
-            self.config.set_for_episode("NPC_N", self._next_num_npc)
+        # Randomize death fog onset
+        self.config.set_for_episode("DEATH_FOG_ONSET", self._np_random.integers(32, 256))
+
+        if self._next_num_npc is None:
+            self._next_num_npc = self._np_random.integers(64, 256)
+        self.config.set_for_episode("NPC_N", self._next_num_npc)
 
 
 class AmmoTraining(ng.AgentTraining):
@@ -120,19 +124,21 @@ class MiniGameConfig(
 
         self.set("PROVIDE_ACTION_TARGETS", True)
         self.set("PROVIDE_NOOP_ACTION_TARGET", True)
+        self.set("PROVIDE_DEATH_FOG_OBS", True)
         self.set("TASK_EMBED_DIM", 16)  # Use the default hash embedding provided by env
         self.set("MAP_FORCE_GENERATION", env_args.map_force_generation)
         self.set("PLAYER_N", env_args.num_agents)
         self.set("HORIZON", env_args.max_episode_length)
         self.set("MAP_N", env_args.num_maps)
         self.set("TEAMS", get_team_dict(env_args.num_agents, env_args.num_agents_per_team))
-        self.set(
-            "DEATH_FOG_ONSET",
-            env_args.death_fog_tick if isinstance(env_args.death_fog_tick, int) else None,
-        )
+        # self.set(
+        #     "DEATH_FOG_ONSET",
+        #     env_args.death_fog_tick if isinstance(env_args.death_fog_tick, int) else None,
+        # )
         self.set("PATH_MAPS", f"{env_args.maps_path}/{env_args.map_size}/")
         self.set("MAP_CENTER", env_args.map_size)
-        self.set("NPC_N", env_args.num_npcs)
+        # self.set("NPC_N", env_args.num_npcs)
+        self.set("NPC_LEVEL_MULTIPLIER", 0.5)  # make the high-level npcs weaker
         self.set("RESOURCE_RESILIENT_POPULATION", env_args.resilient_population)
         self.set("COMBAT_SPAWN_IMMUNITY", env_args.spawn_immunity)
 

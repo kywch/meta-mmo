@@ -117,7 +117,7 @@ class TileEncoder(torch.nn.Module):
         super().__init__()
         self.tile_attr_dim = tile_attr_dim
         self.type_embedding = torch.nn.Embedding(16, 30)
-        self.entity_embedding = torch.nn.Embedding(8, 16)
+        self.entity_embedding = torch.nn.Embedding(8, 15)
         self.rally_embedding = torch.nn.Embedding(8, 15)
 
         self.tile_resnet = ResnetBlock(64)
@@ -132,12 +132,14 @@ class TileEncoder(torch.nn.Module):
         tile_type = tile[:, :, 2].long().clip(0, 15)
         tile_cat = [tile_position, self.type_embedding(tile_type)]  # 32
 
-        # NOTE: forward() breaks if the tile_attr_dim is not 6
+        # NOTE: Check the tile_attr_dim
         if self.tile_attr_dim > 3:
-            dist_map = tile[:, :, 3] / 128
-            entity_map = tile[:, :, 4].long().clip(0, 8)
-            rally_map = tile[:, :, 5].long().clip(0, 8)
+            fog_map = tile[:, :, 3] / 128
+            dist_map = tile[:, :, 4] / 128
+            entity_map = tile[:, :, 5].long().clip(0, 8)
+            rally_map = tile[:, :, 6].long().clip(0, 8)
             tile_cat += [
+                fog_map.unsqueeze(-1),
                 dist_map.unsqueeze(-1),
                 self.entity_embedding(entity_map),
                 self.rally_embedding(rally_map),
