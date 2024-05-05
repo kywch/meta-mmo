@@ -27,7 +27,15 @@ def get_team_dict(num_agents, num_agents_per_team):
 
 
 class TeamBattle(ng.TeamBattle):
+    _next_fog_onset = None
+    _next_fog_speed = None
     _next_num_npc = None
+
+    def set_fog_onset(self, fog_onset):
+        self._next_fog_onset = fog_onset
+
+    def set_fog_speed(self, fog_speed):
+        self._next_fog_speed = fog_speed
 
     def set_num_npc(self, num_npc):
         self._next_num_npc = num_npc
@@ -40,9 +48,10 @@ class TeamBattle(ng.TeamBattle):
         self.config.set_for_episode("TERRAIN_SCATTER_EXTRA_RESOURCES", True)
         self.config.set_for_episode("DEATH_FOG_FINAL_SIZE", 4)
 
-        # Randomize death fog onset, speed
-        self.config.set_for_episode("DEATH_FOG_ONSET", self._np_random.integers(32, 256))
-        self.config.set_for_episode("DEATH_FOG_SPEED", 1 / self._np_random.integers(7, 12))
+        fog_onset = self._next_fog_onset or self._np_random.integers(32, 256)
+        fog_speed = self._next_fog_speed or 1 / self._np_random.integers(7, 12)
+        self.config.set_for_episode("DEATH_FOG_ONSET", fog_onset)
+        self.config.set_for_episode("DEATH_FOG_SPEED", fog_speed)
 
         npc_num = self._next_num_npc or self._np_random.integers(64, 256)
         self.config.set_for_episode("NPC_N", npc_num)
@@ -77,6 +86,10 @@ class EasyKingoftheHill(minigames.KingoftheHill):
 
 class Sandwich(minigames.Sandwich):
     _next_grass_map = None
+    _next_fog_speed = None
+
+    def set_fog_speed(self, fog_speed):
+        self._next_fog_speed = fog_speed
 
     def set_grass_map(self, grass_map):
         self._next_grass_map = grass_map
@@ -87,6 +100,9 @@ class Sandwich(minigames.Sandwich):
         if self._grass_map is None:
             self._grass_map = self._np_random.choice([True, False], p=[0.2, 0.8])
         super()._set_config()
+
+        fog_speed = self._next_fog_speed or 1 / self._np_random.integers(8, 17)
+        self.config.set_for_episode("DEATH_FOG_SPEED", fog_speed)
 
 
 class RadioRaid(minigames.RadioRaid):
