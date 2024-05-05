@@ -194,7 +194,7 @@ def make_env_creator(
     if train_flag is None:
         game_packs = [
             (TeamBattle, 1),
-            (RacetoCenter, 2),
+            (RacetoCenter, 1),
             (EasyKingoftheHill, 1),
             (Sandwich, 1),
         ]
