@@ -38,11 +38,11 @@ class TeamBattle(ng.TeamBattle):
         self.config.set_for_episode("TERRAIN_WATER", 0.1)
         self.config.set_for_episode("TERRAIN_FOILAGE", 0.9)  # prop of stone tiles: 0.1
         self.config.set_for_episode("TERRAIN_SCATTER_EXTRA_RESOURCES", True)
-        self.config.set_for_episode("DEATH_FOG_SPEED", 1 / 6)
         self.config.set_for_episode("DEATH_FOG_FINAL_SIZE", 4)
 
-        # Randomize death fog onset
+        # Randomize death fog onset, speed
         self.config.set_for_episode("DEATH_FOG_ONSET", self._np_random.integers(32, 256))
+        self.config.set_for_episode("DEATH_FOG_SPEED", 1 / self._np_random.integers(7, 12))
 
         npc_num = self._next_num_npc or self._np_random.integers(64, 256)
         self.config.set_for_episode("NPC_N", npc_num)
