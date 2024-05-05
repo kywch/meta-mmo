@@ -100,8 +100,9 @@ class BaseStatWrapper(BaseParallelWrapper):
                     # Max progress is a float between 0 and 1
                     score = task._max_progress
                     if self.env.game.winners and a_id in self.env.game.winners:
-                        # Extra +2 for winning -- a heuristic to mark the winner policy
-                        score += 2
+                        # NOTE: this is a hack. Extra +16 for winning
+                        # A heuristic to mark the winner policy when calculating ELO
+                        score += 16
 
                     # NOTE: avoiding dict to bypass clean_pufferl's unroll_nested_dict
                     game_scores.append((a_id, score))

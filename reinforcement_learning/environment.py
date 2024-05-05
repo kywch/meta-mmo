@@ -73,6 +73,15 @@ class RacetoCenter(minigames.RacetoCenter):
 
 
 class EasyKingoftheHill(minigames.KingoftheHill):
+    _next_fog_onset = None
+    _next_fog_speed = None
+
+    def set_fog_onset(self, fog_onset):
+        self._next_fog_onset = fog_onset
+
+    def set_fog_speed(self, fog_speed):
+        self._next_fog_speed = fog_speed
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.map_size = 60
@@ -82,6 +91,11 @@ class EasyKingoftheHill(minigames.KingoftheHill):
         # make the game easier by decreasing the resource demands/penalty
         self.config.set_for_episode("RESOURCE_DEPLETION_RATE", 3)  # from 5
         self.config.set_for_episode("RESOURCE_RESILIENT_POPULATION", 1)
+
+        fog_onset = self._next_fog_onset or self._np_random.integers(1, 128)
+        fog_speed = self._next_fog_speed or 1 / self._np_random.integers(8, 20)
+        self.config.set_for_episode("DEATH_FOG_ONSET", fog_onset)
+        self.config.set_for_episode("DEATH_FOG_SPEED", fog_speed)
 
 
 class Sandwich(minigames.Sandwich):

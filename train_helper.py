@@ -94,6 +94,7 @@ def create_team_kernel(num_agents, team_dict, num_policies):
     return kernel
 
 
+# NOTE: These game settings are used for evaluation (ELO) and replay
 def make_game_creator(game, num_policies, sample_env):
     kernel = None
     num_agents = len(sample_env.possible_agents)
@@ -101,6 +102,8 @@ def make_game_creator(game, num_policies, sample_env):
 
         def game_creator(env):
             game = environment.TeamBattle(env)
+            game.set_fog_onset(128)
+            game.set_fog_speed(1 / 8)
             game.set_num_npc(128)
             return game
 
@@ -122,15 +125,18 @@ def make_game_creator(game, num_policies, sample_env):
 
         def game_creator(env):
             game = environment.EasyKingoftheHill(env)
-            game.set_seize_duration(100)
+            game.set_seize_duration(200)
+            game.set_fog_onset(32)
+            game.set_fog_speed(1 / 16)
             return game
 
     elif game == "sandwich":
 
         def game_creator(env):
             game = environment.Sandwich(env)
-            game.set_grass_map(True)
-            game.set_inner_npc_num(10)
+            game.set_grass_map(False)
+            game.set_inner_npc_num(16)
+            game.set_fog_speed(1 / 16)
             return game
 
     elif game == "radio":

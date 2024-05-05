@@ -20,7 +20,7 @@ GAME_CLS = {
     "battle": environment.TeamBattle,
     "race": environment.RacetoCenter,
     "koh": environment.EasyKingoftheHill,
-    # "sandwich": environment.Sandwich,
+    "sandwich": environment.Sandwich,
     # "radio": environment.RadioRaid,
 }
 
@@ -229,7 +229,7 @@ if __name__ == "__main__":
         "--game",
         type=str,
         default="all",
-        choices="all battle race koh".split(),
+        choices="all battle race koh sandwich".split(),
         help="Game to evaluate/replay",
     )
     parser.add_argument("-s", "--seed", type=int, default=1, help="Random seed")
