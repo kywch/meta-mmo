@@ -1,6 +1,6 @@
 wandb:
   project: nmmo-team
-  entity: kywch
+  entity: ryansullivan
   group: ~
 
 debug:

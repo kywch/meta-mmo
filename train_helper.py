@@ -22,17 +22,18 @@ def init_wandb(args, resume=True):
     assert args.wandb.project is not None, "Please set the wandb project in config.yaml"
     assert args.wandb.entity is not None, "Please set the wandb entity in config.yaml"
     wandb_kwargs = {
-        "id": args.exp_name or wandb.util.generate_id(),
+        "id": wandb.util.generate_id(),
         "project": args.wandb.project,
         "entity": args.wandb.entity,
         "config": {
             "train_flag": args.train_flag,
-            "cleanrl": args.train,
-            "env": args.env,
+            "cleanrl": vars(args.train),
+            "env": vars(args.env),
             "agent_zoo": args.agent,
-            "policy": args.policy,
-            "recurrent": args.recurrent,
-            "reward_wrapper": args.reward_wrapper,
+            "policy": vars(args.policy),
+            "recurrent": vars(args.recurrent),
+            "reward_wrapper": vars(args.reward_wrapper),
+            "all": vars(args),
         },
         "name": args.exp_name,
         "monitor_gym": True,
@@ -44,7 +45,7 @@ def init_wandb(args, resume=True):
     return wandb.init(**wandb_kwargs)
 
 
-def train(args, env_creator, agent_creator):
+def train(args, env_creator, agent_creator, curriculum=None):
     data = clean_pufferl.create(
         config=args.train,
         agent_creator=agent_creator,
@@ -59,7 +60,9 @@ def train(args, env_creator, agent_creator):
     while not clean_pufferl.done_training(data):
         clean_pufferl.evaluate(data)
         clean_pufferl.train(data)
-
+        if curriculum is not None:
+            curriculum.log_metrics(data.wandb, step=data.global_step)
+    
     print("Done training. Saving data...")
     clean_pufferl.close(data)
     print("Run complete.")
