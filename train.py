@@ -12,6 +12,9 @@ import pufferlib.utils
 
 from reinforcement_learning import environment
 from train_helper import init_wandb, train, sweep, generate_replay
+from syllabus.curricula import DomainRandomization, NoopCurriculum
+from syllabus_utils import SyllabusMinigameTaskWrapper, make_syllabus_mini_env_creator, create_race_koth_curriculum
+from syllabus.core import Curriculum, MultiagentSharedCurriculumWrapper, make_multiprocessing_curriculum
 
 BASELINE_CURRICULUM = "curriculum/team_curriculum_with_embedding.pkl"
 
@@ -56,18 +59,7 @@ def get_init_args(fn):
 
 
 # Return env_creator, agent_creator
-def setup_agent(module_name, train_flag=None, use_mini=None):
-    try:
-        agent_module = importlib.import_module(f"agent_zoo.{module_name}")
-    except ModuleNotFoundError:
-        raise ValueError(f"Agent module {module_name} not found under the agent_zoo directory.")
-
-    env_creator = environment.make_env_creator(
-        reward_wrapper_cls=agent_module.RewardWrapper,
-        train_flag=train_flag,
-        use_mini=use_mini,
-    )
-
+def setup_agent(agent_module):
     recurrent_policy = getattr(agent_module, "Recurrent", None)
 
     def agent_creator(env, args):
@@ -87,7 +79,7 @@ def setup_agent(module_name, train_flag=None, use_mini=None):
         "reward_wrapper": get_init_args(agent_module.RewardWrapper.__init__),
     }
 
-    return agent_module, env_creator, agent_creator, init_args
+    return agent_creator, init_args
 
 
 def combine_config_args(parser, args, config):
@@ -205,15 +197,21 @@ if __name__ == "__main__":
         choices="serial multiprocessing ray".split(),
     )
     parser.add_argument("--use-mini", action="store_true", help="Use mini game config")
+    parser.add_argument("--use-syllabus", action="store_true", help="Use Syllabus for curriculum learning")
+
     parser.add_argument("--no-recurrence", action="store_true", help="Do not use recurrence")
     parser.add_argument("--no-track", action="store_true", help="Do NOT track on WandB")
     parser.add_argument("--debug", action="store_true", help="Debug mode")
 
     args = parser.parse_known_args()[0].__dict__
     config = load_from_config(args["agent"], debug=args.get("debug", False))
-    agent_module, env_creator, agent_creator, init_args = setup_agent(
-        args["agent"], args["train_flag"], args["use_mini"]
-    )
+
+    try:
+        agent_module = importlib.import_module(f"agent_zoo.{args['agent']}")
+    except ModuleNotFoundError:
+        raise ValueError(f"Agent module {module_name} not found under the agent_zoo directory.")
+
+    agent_creator, init_args = setup_agent(agent_module)
 
     # Update config with environment defaults
     config.policy = {**init_args["policy"], **config.policy}
@@ -226,6 +224,34 @@ if __name__ == "__main__":
     # Perform mode-specific updates
     args = update_args(args, mode=args["mode"])
 
+    curriculum = None
+    if args.use_syllabus:
+        # NOTE: Setting use_custom_reward to False will ignore the agent's custom reward
+        # and only use the env-provided reward from the curriculum tasks
+        args.reward_wrapper.use_custom_reward = False
+        sample_env_creator = make_syllabus_mini_env_creator(
+            reward_wrapper_cls=agent_module.RewardWrapper,
+            syllabus_wrapper=True,
+            use_mini=args["use_mini"],
+        )
+        sample_env = sample_env_creator(env=args.env, reward_wrapper=args.reward_wrapper)
+        task_space = SyllabusMinigameTaskWrapper.task_space
+        # curriculum = create_race_koth_curriculum(task_space)
+        curriculum = NoopCurriculum(0)
+        curriculum = MultiagentSharedCurriculumWrapper(curriculum, sample_env.possible_agents)
+        curriculum = make_multiprocessing_curriculum(curriculum)
+        env_creator = make_syllabus_mini_env_creator(
+            reward_wrapper_cls=agent_module.RewardWrapper,
+            curriculum=curriculum,
+            use_mini=args["use_mini"],
+        )
+    else:
+        env_creator = environment.make_env_creator(
+            reward_wrapper_cls=agent_module.RewardWrapper,
+            train_flag=args["train_flag"],
+            use_mini=args["use_mini"],
+        )
+
     if args.train.env_pool is True:
         logging.warning(
             "Env_pool is enabled. This may increase training speed but break determinism."
@@ -237,7 +263,7 @@ if __name__ == "__main__":
         args.exp_name = f"nmmo_{time.strftime('%Y%m%d_%H%M%S')}"
 
     if args.mode == "train":
-        train(args, env_creator, agent_creator)
+        train(args, env_creator, agent_creator, curriculum=curriculum)
         exit(0)
     elif args.mode == "sweep":
         sweep(args, env_creator, agent_creator)
