@@ -12,9 +12,8 @@ import pufferlib.utils
 
 from reinforcement_learning import environment
 from train_helper import init_wandb, train, sweep, generate_replay
-from syllabus.curricula import DomainRandomization, NoopCurriculum
-from syllabus_utils import SyllabusMinigameTaskWrapper, make_syllabus_mini_env_creator, create_race_koth_curriculum
-from syllabus.core import Curriculum, MultiagentSharedCurriculumWrapper, make_multiprocessing_curriculum
+from syllabus_utils import SyllabusMinigameTaskWrapper, make_syllabus_mini_env_creator, create_race_koth_curriculum, create_race_koth_random_curriculum
+from syllabus.core import MultiagentSharedCurriculumWrapper, make_multiprocessing_curriculum
 
 BASELINE_CURRICULUM = "curriculum/team_curriculum_with_embedding.pkl"
 
@@ -236,8 +235,7 @@ if __name__ == "__main__":
         )
         sample_env = sample_env_creator(env=args.env, reward_wrapper=args.reward_wrapper)
         task_space = SyllabusMinigameTaskWrapper.task_space
-        # curriculum = create_race_koth_curriculum(task_space)
-        curriculum = NoopCurriculum(0)
+        curriculum = create_race_koth_random_curriculum(task_space)
         curriculum = MultiagentSharedCurriculumWrapper(curriculum, sample_env.possible_agents)
         curriculum = make_multiprocessing_curriculum(curriculum)
         env_creator = make_syllabus_mini_env_creator(

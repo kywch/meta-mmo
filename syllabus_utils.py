@@ -114,6 +114,19 @@ def create_race_koth_curriculum(task_space):
     return SequentialCurriculum(curricula, stopping, task_space, return_buffer_size=1000)
 
 
+def create_race_koth_random_curriculum(task_space):
+    curricula = []
+    stopping = []
+
+    stage1 = [1, 2]  # RacetoCenter
+    stopping.append("episode_return>=0.75&episodes>=10000")
+
+    stage2 = 2  # EasyKingoftheHill
+
+    curricula = [stage1, stage2]
+    return SequentialCurriculum(curricula, stopping, task_space, return_buffer_size=1000, record_stats=True)
+
+
 def create_koth_tb_curriculum(task_space):
     curricula = []
     stopping = []
@@ -622,13 +635,12 @@ class SyllabusMinigameTaskWrapper(PettingZooTaskWrapper):
     def __init__(self, env: gym.Env):
         super().__init__(env)
         self.env = env
-
         self.task_list = [
-            TeamBattle,
-            RacetoCenter,
-            EasyKingoftheHill,
-            Sandwich,
-            AmmoTraining,
+            TeamBattle(env.env),
+            RacetoCenter(env.env),
+            EasyKingoftheHill(env.env),
+            Sandwich(env.env),
+            AmmoTraining(env.env),
         ]
         self.task_space = SyllabusMinigameTaskWrapper.task_space
         self.task = None

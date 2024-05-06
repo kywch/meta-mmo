@@ -33,7 +33,6 @@ def init_wandb(args, resume=True):
             "policy": vars(args.policy),
             "recurrent": vars(args.recurrent),
             "reward_wrapper": vars(args.reward_wrapper),
-            "reward_wrapper": vars(args.reward_wrapper),
             "all": vars(args),
         },
         "name": args.exp_name,
