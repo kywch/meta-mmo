@@ -58,18 +58,18 @@ class BaseStatWrapper(BaseParallelWrapper):
         for agent_id in self.env.agents:
             obs[agent_id] = self.observation(agent_id, obs[agent_id])
 
-        # Attach the approx sampling info
-        if "stats" not in info:
-            info[agent_id]["stats"] = {}
+        # Attach the approx sampling info to agent 1's info
+        if "stats" not in info[1]:
+            info[1]["stats"] = {}
         for game_name in self.total_agent_steps.keys():
             # Record the cumulative ratio of agent steps and return
             # It will give us a good estimation
-            info[agent_id]["stats"][f"Sampling/{game_name}_agent_steps"] = self.total_agent_steps[
+            info[1]["stats"][f"Sampling/{game_name}_agent_steps"] = self.total_agent_steps[
                 game_name
             ] / sum(self.total_agent_steps.values())
-            info[agent_id]["stats"][f"Sampling/{game_name}_returns"] = self.total_return[
-                game_name
-            ] / sum(self.total_return.values())
+            info[1]["stats"][f"Sampling/{game_name}_returns"] = self.total_return[game_name] / sum(
+                self.total_return.values()
+            )
 
         return obs, info
 
