@@ -1,3 +1,4 @@
+from collections import defaultdict
 import numpy as np
 
 from pettingzoo.utils.wrappers.base_parallel import BaseParallelWrapper
@@ -25,6 +26,10 @@ class BaseStatWrapper(BaseParallelWrapper):
         self._reset_episode_stats()
         self._stat_prefix = stat_prefix
         self.use_custom_reward = use_custom_reward
+
+        # Stats by each game for the whole training duration
+        self.total_agent_steps = defaultdict(int)
+        self.total_return = defaultdict(int)
 
     def observation(self, agent_id, agent_obs):
         """Called before observations are returned from the environment
@@ -110,7 +115,7 @@ class BaseStatWrapper(BaseParallelWrapper):
             # Hack: Putting the results in only one agent's info
             infos[agent_id]["game_scores"] = game_scores
 
-            game_name = self.env.game.__class__.__name__
+            game_name = self.env.game.name
             for key, val in self.env.game.get_episode_stats().items():
                 info["stats"][game_name + "/" + key] = val
             info["stats"][game_name + "/finished_tick"] = self.env.realm.tick
@@ -140,6 +145,15 @@ class BaseStatWrapper(BaseParallelWrapper):
             if isinstance(self.env.game, RadioRaid):
                 info["stats"][game_name + "/goal_num_npc"] = self.env.game.goal_num_npc
                 info["stats"][game_name + "/spawned_npc"] = abs(self.env.realm.npcs.next_id + 1)
+
+            # Record the cumulative ratio of agent steps and return
+            # It will give us a good estimation
+            info["stats"][f"Sampling/{game_name}_agent_steps"] = self.total_agent_steps[
+                game_name
+            ] / sum(self.total_agent_steps.values())
+            info["stats"][f"Sampling/{game_name}_returns"] = self.total_return[game_name] / sum(
+                self.total_return.values()
+            )
 
         return obs, rewards, terms, truncs, infos
 
@@ -185,8 +199,11 @@ class BaseStatWrapper(BaseParallelWrapper):
 
         # NOTE: this may not be true when players can be resurrected. Check back later
         info["length"] = realm.tick
-
         info["return"] = self.cum_rewards[agent_id]
+
+        game_name = self.env.game.name
+        self.total_agent_steps[game_name] += realm.tick
+        self.total_return[game_name] += self.cum_rewards[agent_id]
 
         # Cause of Deaths
         if terminated:
