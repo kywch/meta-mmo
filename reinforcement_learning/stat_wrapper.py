@@ -57,6 +57,20 @@ class BaseStatWrapper(BaseParallelWrapper):
 
         for agent_id in self.env.agents:
             obs[agent_id] = self.observation(agent_id, obs[agent_id])
+
+        # Attach the approx sampling info
+        if "stats" not in info:
+            info[agent_id]["stats"] = {}
+        for game_name in self.total_agent_steps.keys():
+            # Record the cumulative ratio of agent steps and return
+            # It will give us a good estimation
+            info[agent_id]["stats"][f"Sampling/{game_name}_agent_steps"] = self.total_agent_steps[
+                game_name
+            ] / sum(self.total_agent_steps.values())
+            info[agent_id]["stats"][f"Sampling/{game_name}_returns"] = self.total_return[
+                game_name
+            ] / sum(self.total_return.values())
+
         return obs, info
 
     def step(self, action):
@@ -145,15 +159,6 @@ class BaseStatWrapper(BaseParallelWrapper):
             if isinstance(self.env.game, RadioRaid):
                 info["stats"][game_name + "/goal_num_npc"] = self.env.game.goal_num_npc
                 info["stats"][game_name + "/spawned_npc"] = abs(self.env.realm.npcs.next_id + 1)
-
-            # Record the cumulative ratio of agent steps and return
-            # It will give us a good estimation
-            info["stats"][f"Sampling/{game_name}_agent_steps"] = self.total_agent_steps[
-                game_name
-            ] / sum(self.total_agent_steps.values())
-            info["stats"][f"Sampling/{game_name}_returns"] = self.total_return[game_name] / sum(
-                self.total_return.values()
-            )
 
         return obs, rewards, terms, truncs, infos
 
