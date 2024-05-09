@@ -206,6 +206,8 @@ def make_env_creator(
         game_packs = [(EasyKingoftheHill, 1)]
     elif train_flag == "sw_only":
         game_packs = [(Sandwich, 1)]
+    elif train_flag == "no_race":
+        game_packs = [(TeamBattle, 1), (EasyKingoftheHill, 1), (Sandwich, 1)]
     elif train_flag == "tb_ammo":
         game_packs = [(TeamBattle, 5), (AmmoTraining, 1)]
     else:

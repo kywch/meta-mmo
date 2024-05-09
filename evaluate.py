@@ -27,14 +27,12 @@ GAME_CLS = {
 ENV_CONFIG = pufferlib.namespace(
     **{
         "map_force_generation": False,
-        "maps_path": "maps/train/",  # TODO: use separate maps for eval
+        "maps_path": "maps/eval/",
         "map_size": 128,
         "num_maps": 256,
         "max_episode_length": 1024,
         "num_agents": 128,
         "num_agents_per_team": 8,
-        "death_fog_tick": 256,
-        "num_npcs": 256,
         "resilient_population": 0,
         "spawn_immunity": 20,
     }
@@ -59,6 +57,7 @@ def make_env_creator(game, use_mini=False):
             config = environment.MiniGameConfig(ENV_CONFIG)
         else:
             config = environment.FullGameConfig(ENV_CONFIG)
+        config.set("TERRAIN_FLIP_SEED", True)
         config.set("GAME_PACKS", [(GAME_CLS[game], 1)])
 
         env = nmmo.Env(config)
