@@ -21,6 +21,29 @@ def extract_module_fn(module: ModuleType):
     return fn_dict
 
 
+def pca(X, num_components):
+    # 1. Standardize the data
+    # X = (X - np.mean(X, axis=0)) / np.std(X, axis=0)
+
+    # 2. Compute the covariance matrix
+    cov_matrix = np.cov(X, rowvar=False)
+
+    # 3. Compute the eigenvalues and eigenvectors of the covariance matrix
+    eigenvalues, eigenvectors = np.linalg.eigh(cov_matrix)
+
+    # 4. Sort the eigenvalues and corresponding eigenvectors
+    sorted_indices = np.argsort(eigenvalues)[::-1]
+    sorted_eigenvectors = eigenvectors[:, sorted_indices]
+
+    # 5. Select the first k eigenvectors
+    selected_components = sorted_eigenvectors[:, :num_components]
+
+    # 6. Transform the original n-dimensional data points into k dimensions
+    transformed_data = np.dot(X, selected_components)
+
+    return transformed_data
+
+
 class TaskEncoder:
     """A class for encoding tasks into embeddings using a pretrained model."""
 
@@ -30,6 +53,7 @@ class TaskEncoder:
         context: ModuleType,
         batch_size=2,
         tmp_file_path="tmp_task_encoder.pkl",
+        reduce_dim=None,
     ):
         """
         Initialize the TaskEncoder.
@@ -58,6 +82,7 @@ class TaskEncoder:
 
         blank_embedding = self._get_embedding(["# just to get the embedding size"])
         self.embed_dim = len(blank_embedding[0])
+        self.reduce_dim = reduce_dim
 
     def update_context(self, context: ModuleType):
         """Update the module context, extracting function dictionary."""
@@ -154,6 +179,10 @@ class TaskEncoder:
         ]
         embeddings = self._get_embedding(prompts)
 
+        if isinstance(self.reduce_dim, int) and self.reduce_dim < self.embed_dim:
+            embeddings = pca(np.stack(embeddings), self.reduce_dim)
+            embeddings = (embeddings / np.std(embeddings, axis=0)).astype(np.float16)
+
         for single_spec, embedding in zip(task_spec_list, embeddings):
             single_spec.embedding = embedding
 
@@ -179,10 +208,10 @@ class TaskEncoder:
 
 
 if __name__ == "__main__":
-    import curriculum.manual_curriculum as curriculum
+    import curriculum.neurips_curriculum as curriculum
 
     LLM_CHECKPOINT = "deepseek-ai/deepseek-coder-1.3b-instruct"
-    CURRICULUM_FILE_PATH = "curriculum_generation/curriculum_with_embedding.pkl"
+    CURRICULUM_FILE_PATH = "curriculum/neurips_curriculum_with_embedding.pkl"
 
-    with TaskEncoder(LLM_CHECKPOINT, curriculum, batch_size=6) as task_encoder:
+    with TaskEncoder(LLM_CHECKPOINT, curriculum, batch_size=6, reduce_dim=16) as task_encoder:
         task_encoder.get_task_embedding(curriculum.curriculum, save_to_file=CURRICULUM_FILE_PATH)

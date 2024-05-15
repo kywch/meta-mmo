@@ -13,7 +13,7 @@ import pufferlib.utils
 from reinforcement_learning import environment
 from train_helper import init_wandb, train, sweep, generate_replay
 
-BASELINE_CURRICULUM = "curriculum/team_curriculum_with_embedding.pkl"
+BASELINE_CURRICULUM = "curriculum/neurips_curriculum_with_embedding.pkl"
 
 
 def load_from_config(agent, debug=False):
@@ -120,7 +120,7 @@ def update_args(args, mode=None):
     args = pufferlib.namespace(**args)
 
     args.track = not args.no_track
-    # args.env.curriculum_file_path = args.curriculum
+    args.env.curriculum_file_path = args.curriculum
 
     vec = args.vectorization
     if vec == "serial" or args.debug:
@@ -187,9 +187,9 @@ if __name__ == "__main__":
         choices="battle race koh sandwich radio".split(),
         help="Game to evaluate/replay",
     )
-    # parser.add_argument(
-    #     "-c", "--curriculum", type=str, default=BASELINE_CURRICULUM, help="Path to curriculum file"
-    # )
+    parser.add_argument(
+        "-c", "--curriculum", type=str, default=BASELINE_CURRICULUM, help="Path to curriculum file"
+    )
     # parser.add_argument(
     #     "-t",
     #     "--task-to-assign",

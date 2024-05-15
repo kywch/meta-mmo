@@ -7,7 +7,7 @@ from nmmo.lib.event_code import EventCode
 import nmmo.systems.item as Item
 from nmmo.minigames import RacetoCenter, KingoftheHill, Sandwich, RadioRaid
 
-from reinforcement_learning.environment import TeamBattle
+from reinforcement_learning.environment import TeamBattle, AgentTraining
 
 
 class BaseStatWrapper(BaseParallelWrapper):
@@ -231,8 +231,8 @@ class BaseStatWrapper(BaseParallelWrapper):
             # 'return' is used for ranking in the eval mode, so put the task progress here
             info["return"] = task._max_progress  # this is 1 if done
 
-        # Log the below stats ONLY for the team battle
-        if isinstance(self.env.game, TeamBattle):
+        # Log the below stats ONLY for the team battle & agent training
+        if isinstance(self.env.game, TeamBattle) or isinstance(self.env.game, AgentTraining):
             # Max combat/harvest level achieved
             info["stats"]["achieved/max_combat_level"] = agent.attack_level
             info["stats"]["achieved/max_harvest_skill_ammo"] = max(

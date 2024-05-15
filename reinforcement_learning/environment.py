@@ -1,5 +1,8 @@
 from argparse import Namespace
 
+import dill
+import numpy as np
+
 import pufferlib
 import pufferlib.emulation
 from pettingzoo.utils.wrappers.base_parallel import BaseParallelWrapper
@@ -55,6 +58,41 @@ class TeamBattle(ng.TeamBattle):
 
         npc_num = self._next_num_npc or self._np_random.integers(64, 256)
         self.config.set_for_episode("NPC_N", npc_num)
+
+
+class AgentTraining(ng.AgentTraining):
+    def _get_candidate_tasks(self, eval_mode=False):
+        with open(self.config.CURRICULUM_FILE_PATH, "rb") as f:
+            # curriculum file may have been changed, so read the file when sampling
+            curriculum = dill.load(f)  # a list of TaskSpec
+
+        cand_specs = [spec for spec in curriculum if spec.reward_to == "agent"]
+        if eval_mode:
+            cand_specs = [spec for spec in cand_specs if "eval" in spec.tags]
+        else:
+            cand_specs = [spec for spec in cand_specs if "eval" not in spec.tags]
+
+        assert len(cand_specs) > 0, "There is no agent task to be sampled"
+        return cand_specs
+
+    def _make_agent_tasks(self, cand_specs):
+        sampling_weights = [spec.sampling_weight for spec in cand_specs]
+        sampled_spec = self._np_random.choice(
+            cand_specs, size=self.config.PLAYER_N, p=sampling_weights / np.sum(sampling_weights)
+        )
+        return make_task_from_spec(self.config.POSSIBLE_AGENTS, sampled_spec)
+
+    def _define_tasks(self):
+        # NOTE: Some tasks may not be achievable at all when the necessary game system is off
+        cand_specs = self._get_candidate_tasks(eval_mode=False)
+        return self._make_agent_tasks(cand_specs)
+
+
+class AgentTaskEval(AgentTraining):
+    def _define_tasks(self):
+        # NOTE: Some tasks may not be achievable at all when the necessary game system is off
+        cand_specs = self._get_candidate_tasks(eval_mode=True)
+        return self._make_agent_tasks(cand_specs)
 
 
 class AmmoTraining(ng.AgentTraining):
@@ -171,8 +209,7 @@ class MiniGameConfig(
         self.set("RESOURCE_RESILIENT_POPULATION", env_args.resilient_population)
         self.set("COMBAT_SPAWN_IMMUNITY", env_args.spawn_immunity)
 
-        # NOTE: Disabling curriculum file for now
-        # self.set("CURRICULUM_FILE_PATH", env_args.curriculum_file_path)
+        self.set("CURRICULUM_FILE_PATH", env_args.curriculum_file_path)
 
 
 class FullGameConfig(
@@ -210,6 +247,8 @@ def make_env_creator(
         game_packs = [(TeamBattle, 1), (EasyKingoftheHill, 1), (Sandwich, 1)]
     elif train_flag == "tb_ammo":
         game_packs = [(TeamBattle, 5), (AmmoTraining, 1)]
+    elif train_flag == "tb_curr":
+        game_packs = [(TeamBattle, 1), (AgentTraining, 1)]
     else:
         raise ValueError(f"Invalid train_flag: {train_flag}")
 
