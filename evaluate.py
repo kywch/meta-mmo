@@ -3,6 +3,7 @@ import json
 import random
 import logging
 import argparse
+from collections import defaultdict
 
 import numpy as np
 
@@ -17,11 +18,12 @@ from train_helper import make_game_creator
 
 NUM_PVP_EVAL_EPISODE = 200
 GAME_CLS = {
+    "survive": environment.DefaultGame,
     "battle": environment.TeamBattle,
+    "task": environment.AgentTaskEval,
     "race": environment.RacetoCenter,
     "koh": environment.EasyKingoftheHill,
     "sandwich": environment.Sandwich,
-    # "radio": environment.RadioRaid,
 }
 
 ENV_CONFIG = pufferlib.namespace(
@@ -35,6 +37,7 @@ ENV_CONFIG = pufferlib.namespace(
         "num_agents_per_team": 8,
         "resilient_population": 0,
         "spawn_immunity": 20,
+        "curriculum_file_path": "curriculum/neurips_curriculum_with_embedding.pkl",
     }
 )
 
@@ -170,11 +173,12 @@ class EvalRunner:
         }
 
         game_results = []
+        task_results = {}
         cnt_episode = 0
         while cnt_episode < num_eval_episode:
             _, infos = clean_pufferl.evaluate(pufferl_data)
 
-            for vals in infos.values():
+            for pol, vals in infos.items():
                 cnt_episode += sum(vals["episode_done"])
                 if "game_scores" in vals:
                     for episode in vals["game_scores"]:
@@ -189,12 +193,28 @@ class EvalRunner:
                             }
                         )
 
+                # task_results is for the task-level info, used in AgentTaskEval
+                if game == "task":
+                    if pol not in task_results:
+                        task_results[pol] = defaultdict(list)
+                    for k, v in vals.items():
+                        if k == "length":
+                            task_results[pol][k] += v  # length is a plain list
+                        if k.startswith("curriculum"):
+                            task_results[pol][k] += [vv[0] for vv in v]
+
             pufferl_data.sort_keys = []  # TODO: check if this solves memory leak
 
             print(f"\nSeed: {seed}, evaluated {cnt_episode} episodes.\n")
 
         file_name = f"{save_file_prefix}_{seed}.json"
         self._save_results(game_results, file_name)
+
+        if game == "task":
+            # Individual task completion info
+            file_name = f"curriculum_info_{seed}.json"
+            self._save_results(task_results, file_name)
+
         clean_pufferl.close(pufferl_data)
         return game_results, file_name
 
@@ -228,7 +248,7 @@ if __name__ == "__main__":
         "--game",
         type=str,
         default="all",
-        choices="all battle race koh sandwich".split(),
+        choices="all battle race koh sandwich task".split(),
         help="Game to evaluate/replay",
     )
     parser.add_argument("-s", "--seed", type=int, default=1, help="Random seed")
@@ -247,6 +267,7 @@ if __name__ == "__main__":
 
     if args.game == "all":
         game_list = list(GAME_CLS.keys())
+        game_list.remove("task")  # task is only for AgentTaskEval
     elif args.game in GAME_CLS:
         game_list = [args.game]
     else:

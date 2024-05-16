@@ -107,6 +107,24 @@ def make_game_creator(game, num_policies, sample_env):
             game.set_num_npc(128)
             return game
 
+    elif game == "survive":  # Individual game
+        kernel = pp.create_kernel(num_agents, num_policies)
+
+        def game_creator(env):
+            game = environment.DefaultGame(env)
+            game.set_fog_onset(128)
+            game.set_fog_speed(1 / 8)
+            game.set_num_npc(128)
+            return game
+
+    elif game == "task":  # Individual game
+        kernel = pp.create_kernel(num_agents, num_policies)
+
+        def game_creator(env):
+            game = environment.AgentTaskEval(env)
+            game.set_num_npc(128)
+            return game
+
     elif game == "race":  # Individual game
         kernel = pp.create_kernel(num_agents, num_policies)
 
@@ -114,12 +132,6 @@ def make_game_creator(game, num_policies, sample_env):
             game = environment.RacetoCenter(env)
             game.set_map_size(128)
             return game
-
-    elif game == "ammo":  # Individual game
-        kernel = pp.create_kernel(num_agents, num_policies)
-
-        def game_creator(env):
-            return environment.AmmoTraining(env)
 
     elif game == "koh":
 
@@ -134,7 +146,7 @@ def make_game_creator(game, num_policies, sample_env):
 
         def game_creator(env):
             game = environment.Sandwich(env)
-            game.set_grass_map(False)
+            game.set_grass_map(True)
             game.set_inner_npc_num(16)
             game.set_fog_speed(1 / 16)
             return game

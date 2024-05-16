@@ -7,7 +7,7 @@ from nmmo.lib.event_code import EventCode
 import nmmo.systems.item as Item
 from nmmo.minigames import RacetoCenter, KingoftheHill, Sandwich, RadioRaid
 
-from reinforcement_learning.environment import TeamBattle, AgentTraining
+from reinforcement_learning.environment import TeamBattle, AgentTraining, AgentTaskEval
 
 
 class BaseStatWrapper(BaseParallelWrapper):
@@ -113,12 +113,16 @@ class BaseStatWrapper(BaseParallelWrapper):
             # Hack: To mark the end of the episode. Only one agent's done flag is enough.
             infos[agent_id]["episode_done"] = True
 
+            is_task_game = isinstance(self.env.game, AgentTraining) or isinstance(
+                self.env.game, AgentTaskEval
+            )
+
             game_scores = []
             for task in self.env.tasks:
                 for a_id in task.assignee:
                     # Max progress is a float between 0 and 1
                     score = task._max_progress
-                    if self.env.game.winners and a_id in self.env.game.winners:
+                    if not is_task_game and self.env.game.winners and a_id in self.env.game.winners:
                         # NOTE: this is a hack. Extra +16 for winning
                         # A heuristic to mark the winner policy when calculating ELO
                         score += 16
@@ -199,6 +203,10 @@ class BaseStatWrapper(BaseParallelWrapper):
         if "stats" not in info:
             info["stats"] = {}
 
+        game_name = self.env.game.name
+        if game_name not in info["stats"]:
+            info["stats"][game_name] = {}
+
         agent = realm.players.dead_this_tick.get(agent_id, realm.players.get(agent_id))
         assert agent is not None
 
@@ -206,7 +214,6 @@ class BaseStatWrapper(BaseParallelWrapper):
         info["length"] = realm.tick
         info["return"] = self.cum_rewards[agent_id]
 
-        game_name = self.env.game.name
         self.total_agent_steps[game_name] += realm.tick
         self.total_return[game_name] += self.cum_rewards[agent_id]
 
@@ -225,7 +232,7 @@ class BaseStatWrapper(BaseParallelWrapper):
         info["stats"]["task/completed"] = 1.0 if task.completed else 0.0
         info["stats"]["task/pcnt_2_reward_signal"] = 1.0 if task.reward_signal_count >= 2 else 0.0
         info["stats"]["task/pcnt_0p2_max_progress"] = 1.0 if task._max_progress >= 0.2 else 0.0
-        # info["curriculum"] = {task.spec_name: (task._max_progress, task.reward_signal_count)}
+        info["curriculum"] = {task.spec_name: (task._max_progress, task.reward_signal_count)}
 
         if self.eval_mode:
             # 'return' is used for ranking in the eval mode, so put the task progress here
@@ -234,13 +241,13 @@ class BaseStatWrapper(BaseParallelWrapper):
         # Log the below stats ONLY for the team battle & agent training
         if isinstance(self.env.game, TeamBattle) or isinstance(self.env.game, AgentTraining):
             # Max combat/harvest level achieved
-            info["stats"]["achieved/max_combat_level"] = agent.attack_level
-            info["stats"]["achieved/max_harvest_skill_ammo"] = max(
+            info["stats"][game_name]["achieved/max_combat_level"] = agent.attack_level
+            info["stats"][game_name]["achieved/max_harvest_skill_ammo"] = max(
                 agent.prospecting_level.val,
                 agent.carving_level.val,
                 agent.alchemy_level.val,
             )
-            info["stats"]["achieved/max_harvest_skill_consum"] = max(
+            info["stats"][game_name]["achieved/max_harvest_skill_consum"] = max(
                 agent.fishing_level.val,
                 agent.herbalism_level.val,
             )
@@ -248,7 +255,7 @@ class BaseStatWrapper(BaseParallelWrapper):
             # Event-based stats
             achieved, performed, _ = process_event_log(realm, [agent_id])
             for key, val in list(achieved.items()) + list(performed.items()):
-                info["stats"][key] = float(val)
+                info["stats"][game_name][key] = float(val)
 
         if self._stat_prefix:
             info = {self._stat_prefix: info}

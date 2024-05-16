@@ -29,7 +29,7 @@ def get_team_dict(num_agents, num_agents_per_team):
     }
 
 
-class TeamBattle(ng.TeamBattle):
+class DefaultGame(ng.DefaultGame):
     _next_fog_onset = None
     _next_fog_speed = None
     _next_num_npc = None
@@ -60,7 +60,18 @@ class TeamBattle(ng.TeamBattle):
         self.config.set_for_episode("NPC_N", npc_num)
 
 
+class TeamBattle(ng.TeamBattle, DefaultGame):
+    pass
+
+
 class AgentTraining(ng.AgentTraining):
+    _next_num_npc = None
+
+    def _set_config(self):
+        self.config.reset()
+        npc_num = self._next_num_npc or self._np_random.integers(64, 256)
+        self.config.set_for_episode("NPC_N", npc_num)
+
     def _get_candidate_tasks(self, eval_mode=False):
         with open(self.config.CURRICULUM_FILE_PATH, "rb") as f:
             # curriculum file may have been changed, so read the file when sampling
@@ -95,7 +106,7 @@ class AgentTaskEval(AgentTraining):
         return self._make_agent_tasks(cand_specs)
 
 
-class AmmoTraining(ng.AgentTraining):
+class AmmoTraining(AgentTraining):
     def is_compatible(self):
         return self.config.are_systems_enabled(["COMBAT", "EQUIPMENT", "PROFESSION"])
 
@@ -198,18 +209,16 @@ class MiniGameConfig(
         self.set("HORIZON", env_args.max_episode_length)
         self.set("MAP_N", env_args.num_maps)
         self.set("TEAMS", get_team_dict(env_args.num_agents, env_args.num_agents_per_team))
-        # self.set(
-        #     "DEATH_FOG_ONSET",
-        #     env_args.death_fog_tick if isinstance(env_args.death_fog_tick, int) else None,
-        # )
         self.set("PATH_MAPS", f"{env_args.maps_path}/{env_args.map_size}/")
         self.set("MAP_CENTER", env_args.map_size)
-        # self.set("NPC_N", env_args.num_npcs)
-        self.set("NPC_LEVEL_MULTIPLIER", 0.5)  # make the high-level npcs weaker
+
         self.set("RESOURCE_RESILIENT_POPULATION", env_args.resilient_population)
         self.set("COMBAT_SPAWN_IMMUNITY", env_args.spawn_immunity)
 
         self.set("CURRICULUM_FILE_PATH", env_args.curriculum_file_path)
+
+        # Make the high-level npcs weaker. Huge impact on the difficulty
+        self.set("NPC_LEVEL_MULTIPLIER", 0.5)
 
 
 class FullGameConfig(
@@ -249,6 +258,8 @@ def make_env_creator(
         game_packs = [(TeamBattle, 5), (AmmoTraining, 1)]
     elif train_flag == "tb_curr":
         game_packs = [(TeamBattle, 1), (AgentTraining, 1)]
+    elif train_flag == "full_surv":
+        game_packs = [(DefaultGame, 1), (TeamBattle, 1), (AgentTraining, 1)]
     else:
         raise ValueError(f"Invalid train_flag: {train_flag}")
 
