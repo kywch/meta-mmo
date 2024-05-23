@@ -1,5 +1,5 @@
 wandb:
-  project: nmmo-team
+  project: nmmo-mega
   entity: kywch
   group: ~
 
@@ -15,7 +15,7 @@ debug:
     verbose: True
 
 train:
-  seed: 1
+  seed: 21
   torch_deterministic: True
   device: cuda
   total_timesteps: 100_000_000

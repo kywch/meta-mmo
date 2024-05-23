@@ -29,7 +29,7 @@ def get_team_dict(num_agents, num_agents_per_team):
     }
 
 
-class DefaultGame(ng.DefaultGame):
+class Survive(ng.DefaultGame):
     _next_fog_onset = None
     _next_fog_speed = None
     _next_num_npc = None
@@ -60,11 +60,15 @@ class DefaultGame(ng.DefaultGame):
         self.config.set_for_episode("NPC_N", npc_num)
 
 
-class TeamBattle(ng.TeamBattle, DefaultGame):
+class TeamBattle(ng.TeamBattle, Survive):
     pass
 
 
-class AgentTraining(ng.AgentTraining):
+class ProtectTheKing(ng.ProtectTheKing, Survive):
+    pass
+
+
+class MultiTaskTraining(ng.AgentTraining):
     _next_num_npc = None
 
     def _set_config(self):
@@ -99,14 +103,14 @@ class AgentTraining(ng.AgentTraining):
         return self._make_agent_tasks(cand_specs)
 
 
-class AgentTaskEval(AgentTraining):
+class MultiTaskEval(MultiTaskTraining):
     def _define_tasks(self):
         # NOTE: Some tasks may not be achievable at all when the necessary game system is off
         cand_specs = self._get_candidate_tasks(eval_mode=True)
         return self._make_agent_tasks(cand_specs)
 
 
-class AmmoTraining(AgentTraining):
+class AmmoTraining(MultiTaskTraining):
     def is_compatible(self):
         return self.config.are_systems_enabled(["COMBAT", "EQUIPMENT", "PROFESSION"])
 
@@ -121,7 +125,7 @@ class RacetoCenter(minigames.RacetoCenter):
     pass
 
 
-class EasyKingoftheHill(minigames.KingoftheHill):
+class KingoftheHill(minigames.KingoftheHill):
     _next_fog_onset = None
     _next_fog_speed = None
 
@@ -166,25 +170,6 @@ class Sandwich(minigames.Sandwich):
 
         fog_speed = self._next_fog_speed or 1 / self._np_random.integers(8, 17)
         self.config.set_for_episode("DEATH_FOG_SPEED", fog_speed)
-
-
-class RadioRaid(minigames.RadioRaid):
-    _next_grass_map = None
-    _next_goal_num_npc = None
-
-    def set_grass_map(self, grass_map):
-        self._next_grass_map = grass_map
-
-    def set_goal_num_npc(self, num_npc):
-        self._next_goal_num_npc = num_npc
-
-    def _set_config(self):
-        # randomly select whether to use the terrain map or grass map
-        self._grass_map = self._next_grass_map
-        if self._grass_map is None:
-            self._grass_map = self._np_random.choice([True, False])
-        self._goal_num_npc = self._next_goal_num_npc or self._goal_num_npc
-        super()._set_config()
 
 
 class MiniGameConfig(
@@ -237,29 +222,34 @@ def make_env_creator(
     train_flag: str = None,
     use_mini: bool = False,
 ):
-    if train_flag is None:
+    if train_flag is None or train_flag == "full_gen":
         game_packs = [
+            (Survive, 1),
             (TeamBattle, 1),
-            (RacetoCenter, 1),
-            (EasyKingoftheHill, 1),
-            (Sandwich, 1),
+            (MultiTaskTraining, 1),
         ]
+    elif train_flag == "sv_only":
+        game_packs = [(Survive, 1)]
     elif train_flag == "tb_only":
         game_packs = [(TeamBattle, 1)]
+    elif train_flag == "mt_only":
+        game_packs = [(MultiTaskTraining, 1)]
+    elif train_flag == "mini_gen":
+        game_packs = [
+            (TeamBattle, 1),
+            (ProtectTheKing, 1),
+            (RacetoCenter, 1),
+            (KingoftheHill, 1),
+            (Sandwich, 1),
+        ]
+    elif train_flag == "pk_only":
+        game_packs = [(ProtectTheKing, 1)]
     elif train_flag == "rc_only":
         game_packs = [(RacetoCenter, 1)]
     elif train_flag == "kh_only":
-        game_packs = [(EasyKingoftheHill, 1)]
+        game_packs = [(KingoftheHill, 1)]
     elif train_flag == "sw_only":
         game_packs = [(Sandwich, 1)]
-    elif train_flag == "no_race":
-        game_packs = [(TeamBattle, 1), (EasyKingoftheHill, 1), (Sandwich, 1)]
-    elif train_flag == "tb_ammo":
-        game_packs = [(TeamBattle, 5), (AmmoTraining, 1)]
-    elif train_flag == "tb_curr":
-        game_packs = [(TeamBattle, 1), (AgentTraining, 1)]
-    elif train_flag == "full_surv":
-        game_packs = [(DefaultGame, 1), (TeamBattle, 1), (AgentTraining, 1)]
     else:
         raise ValueError(f"Invalid train_flag: {train_flag}")
 

@@ -184,7 +184,7 @@ if __name__ == "__main__":
         "--game",
         type=str,
         default=None,
-        choices="survive battle race koh sandwich radio".split(),
+        choices="survive battle task ptk race koh sandwich".split(),
         help="Game to evaluate/replay",
     )
     parser.add_argument(

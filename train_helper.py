@@ -151,12 +151,13 @@ def make_game_creator(game, num_policies, sample_env):
             game.set_fog_speed(1 / 16)
             return game
 
-    elif game == "radio":
+    elif game == "ptk":
 
         def game_creator(env):
-            game = environment.RadioRaid(env)
-            game.set_grass_map(True)
-            game.set_goal_num_npc(50)
+            game = environment.ProtectTheKing(env)
+            game.set_fog_onset(128)
+            game.set_fog_speed(1 / 8)
+            game.set_num_npc(128)
             return game
 
     else:

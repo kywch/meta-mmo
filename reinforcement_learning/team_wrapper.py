@@ -39,7 +39,7 @@ class TeamWrapper(BaseStatWrapper):
 
         # Team/agent, system states, task embedding
         self._task = {}
-        self._task_obs = {  # Task dim: 2059
+        self._task_obs = {  # Task dim: 27
             agent_id: np.zeros(
                 1 + len(self.config.system_states) + self.config.TASK_EMBED_DIM, dtype=np.float16
             )
@@ -269,16 +269,23 @@ class TeamWrapper(BaseStatWrapper):
         entity_map[
             ent_rows[my_team == False & (entities > 0)], ent_cols[my_team == False & (entities > 0)]
         ] = ENEMY_REPR
+        # Use npc_type to augment the team info
+        agent_obs["Entity"][np.where(my_team), EntityAttr["npc_type"]] = TEAMMATE_REPR
+        agent_obs["Entity"][np.where(my_team == False & (entities > 0)), EntityAttr["npc_type"]] = (
+            ENEMY_REPR
+        )
 
         destroy_target = np.in1d(
             entities, self._obs_data[agent_id]["pass_to_whp"]["target_destroy"]
         )
         entity_map[ent_rows[destroy_target], ent_cols[destroy_target]] = DESTROY_TARGET_REPR
+        agent_obs["Entity"][np.where(destroy_target), EntityAttr["npc_type"]] = DESTROY_TARGET_REPR
 
         protect_target = np.in1d(
             entities, self._obs_data[agent_id]["pass_to_whp"]["target_protect"]
         )
         entity_map[ent_rows[protect_target], ent_cols[protect_target]] = PROTECT_TARGET_REPR
+        agent_obs["Entity"][np.where(protect_target), EntityAttr["npc_type"]] = PROTECT_TARGET_REPR
 
     def _compute_comm_action(self, agent_id):
         # comm action values range from 0 - 127, 0: dummy obs

@@ -5,9 +5,9 @@ from pettingzoo.utils.wrappers.base_parallel import BaseParallelWrapper
 
 from nmmo.lib.event_code import EventCode
 import nmmo.systems.item as Item
-from nmmo.minigames import RacetoCenter, KingoftheHill, Sandwich, RadioRaid
+from nmmo.minigames import RacetoCenter, KingoftheHill, Sandwich
 
-from reinforcement_learning.environment import DefaultGame, AgentTraining, AgentTaskEval
+from reinforcement_learning.environment import Survive, MultiTaskTraining, MultiTaskEval
 
 
 class BaseStatWrapper(BaseParallelWrapper):
@@ -113,8 +113,8 @@ class BaseStatWrapper(BaseParallelWrapper):
             # Hack: To mark the end of the episode. Only one agent's done flag is enough.
             infos[agent_id]["episode_done"] = True
 
-            is_task_game = isinstance(self.env.game, AgentTraining) or isinstance(
-                self.env.game, AgentTaskEval
+            is_task_game = isinstance(self.env.game, MultiTaskTraining) or isinstance(
+                self.env.game, MultiTaskEval
             )
 
             game_scores = []
@@ -145,7 +145,6 @@ class BaseStatWrapper(BaseParallelWrapper):
                 isinstance(self.env.game, RacetoCenter)
                 or isinstance(self.env.game, KingoftheHill)
                 or isinstance(self.env.game, Sandwich)
-                or isinstance(self.env.game, RadioRaid)
             ):
                 info["stats"][game_name + "/game_won"] = self.env.game.winners is not None
                 info["stats"][game_name + "/map_size"] = self.env.game.map_size
@@ -158,10 +157,6 @@ class BaseStatWrapper(BaseParallelWrapper):
 
             if isinstance(self.env.game, Sandwich):
                 info["stats"][game_name + "/inner_npc_num"] = self.env.game.inner_npc_num
-                info["stats"][game_name + "/spawned_npc"] = abs(self.env.realm.npcs.next_id + 1)
-
-            if isinstance(self.env.game, RadioRaid):
-                info["stats"][game_name + "/goal_num_npc"] = self.env.game.goal_num_npc
                 info["stats"][game_name + "/spawned_npc"] = abs(self.env.realm.npcs.next_id + 1)
 
         return obs, rewards, terms, truncs, infos
@@ -239,7 +234,7 @@ class BaseStatWrapper(BaseParallelWrapper):
             info["return"] = task._max_progress  # this is 1 if done
 
         # Log the below stats ONLY for the team battle & agent training
-        if isinstance(self.env.game, DefaultGame) or isinstance(self.env.game, AgentTraining):
+        if isinstance(self.env.game, Survive) or isinstance(self.env.game, MultiTaskTraining):
             # Max combat/harvest level achieved
             info["stats"][game_name]["achieved/max_combat_level"] = agent.attack_level
             info["stats"][game_name]["achieved/max_harvest_skill_ammo"] = max(
