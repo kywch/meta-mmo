@@ -18,12 +18,13 @@ from train_helper import make_game_creator
 
 NUM_PVP_EVAL_EPISODE = 200
 GAME_CLS = {
-    "survive": environment.DefaultGame,
+    "survive": environment.Survive,
     "battle": environment.TeamBattle,
-    "task": environment.AgentTaskEval,
+    "task": environment.MultiTaskEval,
     "race": environment.RacetoCenter,
-    "koh": environment.EasyKingoftheHill,
+    "koh": environment.KingoftheHill,
     "sandwich": environment.Sandwich,
+    "ptk": environment.ProtectTheKing,
 }
 
 ENV_CONFIG = pufferlib.namespace(
@@ -248,7 +249,7 @@ if __name__ == "__main__":
         "--game",
         type=str,
         default="all",
-        choices="all battle race koh sandwich task".split(),
+        choices="all battle survive race koh sandwich task ptk".split(),
         help="Game to evaluate/replay",
     )
     parser.add_argument("-s", "--seed", type=int, default=1, help="Random seed")

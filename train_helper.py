@@ -111,7 +111,7 @@ def make_game_creator(game, num_policies, sample_env):
         kernel = pp.create_kernel(num_agents, num_policies)
 
         def game_creator(env):
-            game = environment.DefaultGame(env)
+            game = environment.Survive(env)
             game.set_fog_onset(128)
             game.set_fog_speed(1 / 8)
             game.set_num_npc(128)
@@ -121,7 +121,7 @@ def make_game_creator(game, num_policies, sample_env):
         kernel = pp.create_kernel(num_agents, num_policies)
 
         def game_creator(env):
-            game = environment.AgentTaskEval(env)
+            game = environment.MultiTaskEval(env)
             game.set_num_npc(128)
             return game
 
@@ -136,7 +136,7 @@ def make_game_creator(game, num_policies, sample_env):
     elif game == "koh":
 
         def game_creator(env):
-            game = environment.EasyKingoftheHill(env)
+            game = environment.KingoftheHill(env)
             game.set_seize_duration(200)
             game.set_fog_onset(32)
             game.set_fog_speed(1 / 16)
