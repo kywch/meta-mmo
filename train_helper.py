@@ -1,5 +1,6 @@
 import os
 import time
+import pickle
 import logging
 
 import wandb
@@ -323,6 +324,9 @@ def generate_replay(args, env_creator, agent_creator, seed=None):
     replay_file = os.path.join(save_dir, replay_file + time.strftime("%Y%m%d_%H%M%S"))
     print(f"Saving replay to {replay_file}")
     replay_helper.save(replay_file, compress=True)
+    if len(policies) > 1:
+        with open(os.path.join(replay_file + ".policy_map.pkl"), "wb") as f:
+            pickle.dump(agent_policy_map, f)
     clean_pufferl.close(data)
 
     return replay_file

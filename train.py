@@ -3,6 +3,7 @@ import importlib
 import argparse
 import inspect
 import logging
+import random
 import yaml
 import time
 import sys
@@ -177,6 +178,11 @@ if __name__ == "__main__":
         "-n", "--exp-name", type=str, default=None, help="Need exp name to resume the experiment"
     )
     parser.add_argument(
+        "-c", "--curriculum", type=str, default=BASELINE_CURRICULUM, help="Path to curriculum file"
+    )
+
+    # Arguments for replay generation
+    parser.add_argument(
         "-p", "--eval-model-path", type=str, default=None, help="Path to model to evaluate"
     )
     parser.add_argument(
@@ -188,15 +194,9 @@ if __name__ == "__main__":
         help="Game to evaluate/replay",
     )
     parser.add_argument(
-        "-c", "--curriculum", type=str, default=BASELINE_CURRICULUM, help="Path to curriculum file"
+        "-r", "--repeat", type=int, default=1, help="Number of times to repeat the evaluation"
     )
-    # parser.add_argument(
-    #     "-t",
-    #     "--task-to-assign",
-    #     type=int,
-    #     default=None,
-    #     help="The index of the task to assign in the curriculum file",
-    # )
+
     # parser.add_argument('--baseline', action='store_true', help='Baseline run')
     parser.add_argument(
         "--vectorization",
@@ -243,7 +243,10 @@ if __name__ == "__main__":
         sweep(args, env_creator, agent_creator)
         exit(0)
     elif args.mode == "replay":
-        generate_replay(args, env_creator, agent_creator)
+        for i in range(args.repeat):
+            if i > 0:
+                args.train.seed = random.randint(10000000, 99999999)
+            generate_replay(args, env_creator, agent_creator)
         exit(0)
     else:
         raise ValueError("Mode must be one of train, sweep, or evaluate")

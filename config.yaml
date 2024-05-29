@@ -1,5 +1,5 @@
 wandb:
-  project: nmmo-mega
+  project: meta-mmo
   entity: kywch
   group: ~
 
