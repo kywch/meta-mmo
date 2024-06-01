@@ -23,22 +23,23 @@ def init_wandb(args, resume=True):
     assert args.wandb.project is not None, "Please set the wandb project in config.yaml"
     assert args.wandb.entity is not None, "Please set the wandb entity in config.yaml"
     wandb_kwargs = {
-        "id": args.exp_name or wandb.util.generate_id(),
+        "id": wandb.util.generate_id(),
         "project": args.wandb.project,
         "entity": args.wandb.entity,
         "config": {
             "train_flag": args.train_flag,
-            "cleanrl": args.train,
-            "env": args.env,
+            "cleanrl": vars(args.train),
+            "env": vars(args.env),
             "agent_zoo": args.agent,
-            "policy": args.policy,
-            "recurrent": args.recurrent,
-            "reward_wrapper": args.reward_wrapper,
+            "policy": vars(args.policy),
+            "recurrent": vars(args.recurrent),
+            "reward_wrapper": vars(args.reward_wrapper),
+            "all": vars(args),
         },
-        "name": args.exp_name,
-        "monitor_gym": True,
-        "save_code": True,
-        "resume": resume,
+        # "name": args.exp_name,
+        # "monitor_gym": True,
+        # "save_code": True,
+        # "resume": resume,
     }
     if args.wandb.group is not None:
         wandb_kwargs["group"] = args.wandb.group
@@ -230,7 +231,9 @@ def generate_replay(args, env_creator, agent_creator, seed=None):
     if len(policies) > 1:
         agent_policy_map = {}
         for policy_id, samp in data.policy_pool.sample_idxs.items():
-            policy_name = data.policy_pool.current_policies[policy_id]["name"].replace("_", "-")
+            policy_name = "learner"
+            if policy_id in data.policy_pool.current_policies:
+                policy_name = data.policy_pool.current_policies[policy_id]["name"].replace("_", "-")
             for idx in samp:
                 agent_id = idx + 1  # agents are 0-indexed in policy_pool, but 1-indexed in nmmo
                 nmmo_env.realm.players[agent_id].name += f"-({policy_name})"

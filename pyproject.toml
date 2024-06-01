@@ -2,9 +2,9 @@
 requires = ["cython>=3.0", "pip>=23.0", "setuptools>=61.0", "wheel"]
 
 [project]
-name = "nmmo2-team"
-version = "0.0.1"
-description = "Neural MMO 2.1 team battle"
+name = "meta-mmo"
+version = "0.1.0"
+description = "Meta MMO baselines"
 keywords = []
 classifiers = [
 	"Natural Language :: English",
@@ -17,7 +17,8 @@ classifiers = [
 dependencies = [
     "accelerate==0.27.2",
     "cython",
-    "nmmo@git+https://github.com/kywch/nmmo-environment",  # WIP nmmo 2.1
+    "nmmo@git+https://github.com/NeuralMMO/environment@2.1",
+    "matplotlib",
     "polars",
     "pufferlib[nmmo]==0.7.3",
     "psutil",

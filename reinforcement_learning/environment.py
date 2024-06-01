@@ -71,6 +71,9 @@ class ProtectTheKing(ng.ProtectTheKing, Survive):
 class MultiTaskTraining(ng.AgentTraining):
     _next_num_npc = None
 
+    def set_num_npc(self, num_npc):
+        self._next_num_npc = num_npc
+
     def _set_config(self):
         self.config.reset()
         npc_num = self._next_num_npc or self._np_random.integers(64, 256)
