@@ -99,12 +99,12 @@ def process_eval_files(policy_store_dir, eval_prefix):
             summary = summarize_single_eval(pol_data, weighted_score=True)
             summ_policy.append(
                 {
-                    "policy_name": pol_name,
+                    "policy": pol_name,
                     "mode": mode,
                     "seed": random_seed,
                     "count": summary["length"]["count"],
                     "length": summary["length"]["mean"],
-                    "score": summary["avg_progress"],
+                    "task_progress": summary["avg_progress"],
                     "weighted_score": summary["weighted_score"],
                 }
             )
@@ -118,18 +118,18 @@ def process_eval_files(policy_store_dir, eval_prefix):
                         "category": task_data["category"],
                         "task_name": task_name,
                         "weight": task_data["weight"],
-                        "policy_name": pol_name,
+                        "policy": pol_name,
                         "mode": mode,
                         "seed": random_seed,
                         "count": task_data["count"],
-                        "score": task_data["mean"],
+                        "task_progress": task_data["mean"],
                     }
                 )
 
-    summ_df = pl.DataFrame(summ_policy).sort(["policy_name", "mode", "seed"])
-    summ_grp = summ_df.group_by(["policy_name", "mode"]).agg(
+    summ_df = pl.DataFrame(summ_policy).sort(["policy", "mode", "seed"])
+    summ_grp = summ_df.group_by(["policy", "mode"]).agg(
         pl.col("length").mean(),
-        pl.col("score").mean(),
+        pl.col("task_progress").mean(),
         pl.col("weighted_score").mean(),
     )
     summ_grp = summ_grp.sort("weighted_score", descending=True)
@@ -139,16 +139,16 @@ def process_eval_files(policy_store_dir, eval_prefix):
     print("\nPolicy score summary, sorted by weighted_score:")
     print(summ_grp)
 
-    task_df = pl.DataFrame(summ_task).sort(["mode", "category", "task_name", "policy_name", "seed"])
-    task_grp = task_df.group_by(["mode", "category", "task_name", "policy_name"]).agg(
-        pl.col("score").mean()
+    task_df = pl.DataFrame(summ_task).sort(["mode", "category", "task_name", "policy", "seed"])
+    task_grp = task_df.group_by(["mode", "category", "task_name", "policy"]).agg(
+        pl.col("task_progress").mean()
     )
-    task_grp = task_grp.sort(["mode", "category", "task_name", "policy_name"])
+    task_grp = task_grp.sort(["mode", "category", "task_name", "policy"])
     task_grp.write_csv(
         os.path.join(policy_store_dir, "score_task_summary.tsv"), separator="\t", float_precision=6
     )
-    cate_grp = task_df.group_by(["mode", "category", "policy_name"]).agg(pl.col("score").mean())
-    cate_grp = cate_grp.sort(["mode", "category", "policy_name"])
+    cate_grp = task_df.group_by(["mode", "category", "policy"]).agg(pl.col("task_progress").mean())
+    cate_grp = cate_grp.sort(["mode", "category", "policy"])
     cate_grp.write_csv(
         os.path.join(policy_store_dir, "score_category_summary.tsv"),
         separator="\t",
@@ -165,7 +165,7 @@ def process_eval_files(policy_store_dir, eval_prefix):
             float_precision=6,
         )
 
-    return summ_df, summ_grp, task_df, task_grp, cate_grp
+    return summ_grp
 
 
 if __name__ == "__main__":
