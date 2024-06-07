@@ -1,6 +1,6 @@
 # Meta MMO: Massively Multiagent Minigames for Training Generalist Agents
 
-Meta MMO is a collection of many-agent minigames built on top of [Neural MMO](https://github.com/NeuralMMO/environment) to serve as a benchmark for reinforcement learning. It offers a diverse set of configurable minigames that allow fine-grained control over game objectives, agent spawning, team assignments, and various game elements. Meta MMO enables faster training (up to 3x speedup compared to Neural MMO), adaptive difficulty, and curriculum learning.
+Meta MMO is a collection of many-agent minigames built on top of [Neural MMO](https://github.com/NeuralMMO/environment) to serve as a benchmark for reinforcement learning. It offers a diverse set of configurable minigames that allow fine-grained control over game objectives, agent spawning, team assignments, and various game elements. Meta MMO enables faster training, adaptive difficulty, and curriculum learning.
 
 ## Getting Started
 
