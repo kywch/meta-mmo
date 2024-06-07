@@ -79,4 +79,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Acknowledgments
 
 - [Neural MMO](https://github.com/NeuralMMO/environment) - The base environment for Meta MMO
-- [PufferLib](https://github.com/PufferAI/pufferlib) - A library for super efficient RL training for complex environments
+- [PufferLib](https://github.com/PufferAI/pufferlib) - A super efficient RL library for complex environments
