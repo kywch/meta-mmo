@@ -79,16 +79,17 @@ If you use Meta MMO in your research, please cite the following papers:
       primaryClass={cs.AI},
       url={https://arxiv.org/abs/2406.05071}, 
 }
-@inproceedings{NEURIPS2023_9ca22870,
- author = {Suarez, Joseph and Bloomin, David and Choe, Kyoung Whan and Li, Hao Xiang and Sullivan, Ryan and Kanna, Nishaanth and Scott, Daniel and Shuman, Rose and Bradley, Herbie and Castricato, Louis and Isola, Phillip and Yu, Chenghui and Jiang, Yuhao and Li, Qimai and Chen, Jiaxin and Zhu, Xiaolong},
- booktitle = {Advances in Neural Information Processing Systems},
- editor = {A. Oh and T. Naumann and A. Globerson and K. Saenko and M. Hardt and S. Levine},
- pages = {50094--50104},
- publisher = {Curran Associates, Inc.},
- title = {Neural MMO 2.0: A Massively Multi-task Addition to Massively Multi-agent Learning},
- url = {https://proceedings.neurips.cc/paper_files/paper/2023/file/9ca22870ae0ba55ee50ce3e2d269e5de-Paper-Datasets_and_Benchmarks.pdf},
- volume = {36},
- year = {2023}
+
+@inproceedings{suárez2023neuralmmo20massively,
+      title={Neural MMO 2.0: A Massively Multi-task Addition to Massively Multi-agent Learning}, 
+      author={Joseph Suárez and Phillip Isola and Kyoung Whan Choe and David Bloomin and Hao Xiang Li and Nikhil Pinnaparaju and Nishaanth Kanna and Daniel Scott and Ryan Sullivan and Rose S. Shuman and Lucas de Alcântara and Herbie Bradley and Louis Castricato and Kirsty You and Yuhao Jiang and Qimai Li and Jiaxin Chen and Xiaolong Zhu},
+      year={2023},
+      booktitle = {Advances in Neural Information Processing Systems},
+      editor = {A. Oh and T. Naumann and A. Globerson and K. Saenko and M. Hardt and S. Levine},
+      pages = {50094--50104},
+      volume = {36},
+      publisher = {Curran Associates, Inc.},
+      url = {https://proceedings.neurips.cc/paper_files/paper/2023/file/9ca22870ae0ba55ee50ce3e2d269e5de-Paper-Datasets_and_Benchmarks.pdf},
 }
 ```
 
