@@ -1,6 +1,5 @@
 wandb:
   project: meta-mmo
-  entity: kywch
   group: ~
 
 debug:

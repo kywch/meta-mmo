@@ -21,11 +21,9 @@ def init_wandb(args, resume=True):
     if args.no_track:
         return None
     assert args.wandb.project is not None, "Please set the wandb project in config.yaml"
-    assert args.wandb.entity is not None, "Please set the wandb entity in config.yaml"
     wandb_kwargs = {
         "id": wandb.util.generate_id(),
         "project": args.wandb.project,
-        "entity": args.wandb.entity,
         "config": {
             "train_flag": args.train_flag,
             "cleanrl": vars(args.train),
