@@ -18,8 +18,7 @@ requires-python = ">=3.9,<3.11"
 dependencies = [
     "accelerate==0.27.2",
     "cython",
-    # "nmmo@git+https://github.com/NeuralMMO/environment@2.1",
-    "nmmo@git+https://github.com/kywch/nmmo-environment@rip-vecns",
+    "nmmo==2.1.2",
     "numpy==1.23.3",
     "matplotlib",
     "polars",
