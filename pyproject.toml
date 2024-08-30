@@ -40,7 +40,8 @@ monitoring = [
 ]
 dev = [
     "pre-commit",
-    "ruff"
+    "ruff",
+    "objgraph",
 ]
 
 [tool.distutils.bdist_wheel]

@@ -57,7 +57,9 @@ def train(args, env_creator, agent_creator):
     )
 
     while not clean_pufferl.done_training(data):
-        clean_pufferl.evaluate(data)
+        stats, infos = clean_pufferl.evaluate(data)  # noqa
+        infos.clear()
+
         clean_pufferl.train(data)
 
     print("Done training. Saving data...")
