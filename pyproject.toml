@@ -18,6 +18,7 @@ dependencies = [
     "accelerate==0.27.2",
     "cython",
     "nmmo@git+https://github.com/NeuralMMO/environment@2.1",
+    "numpy==1.23.3",
     "matplotlib",
     "polars",
     "pufferlib[nmmo]==0.7.3",
